@@ -1,0 +1,15 @@
+{
+  "name": "Gym Otak",
+  "short_name": "Gym Otak",
+  "description": "Latihan harian 10 menit untuk fokus, memori, dan tahan bosan.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#13112b",
+  "theme_color": "#1e1b4b",
+  "lang": "id",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

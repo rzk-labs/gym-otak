@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#1e1b4b">
+<title>Gym Otak</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Gym Otak">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root{--bg:#13112b;--card:#232046;--tx:#f5f3ff;--mut:#a5a3c9;--acc:#a78bfa;--ok:#4ade80;--bad:#f87171}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;padding-bottom:84px;user-select:none;-webkit-user-select:none}
+  header{padding:calc(18px + env(safe-area-inset-top)) 16px 4px;max-width:520px;margin:0 auto}
+  h1{margin:0;font-size:24px}
+  .sub{color:var(--mut);font-size:14px;margin-top:4px}
+  main{padding:12px 16px;max-width:520px;margin:0 auto}
+  .card{background:var(--card);border-radius:18px;padding:16px;margin-bottom:12px}
+  h2{font-size:17px;margin:0 0 8px}
+  button{font:inherit;border:0;border-radius:14px;padding:14px;background:#37335f;color:var(--tx);cursor:pointer;width:100%}
+  button.pri{background:var(--acc);color:#1e1b4b;font-weight:800}
+  button.ghost{background:transparent;border:1px solid #4b4680}
+  .mut{color:var(--mut);font-size:14px}
+  .ex{display:flex;align-items:center;gap:12px}
+  .ex .ic{font-size:30px;width:44px;text-align:center}
+  .ex .tt{flex:1}
+  .ex .sc{font-weight:800}
+  .done{color:var(--ok)}
+  .hide{display:none!important}
+  nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#0e0c22;border-top:1px solid #37335f;padding-bottom:env(safe-area-inset-bottom)}
+  nav button{border-radius:0;background:transparent;color:var(--mut);padding:12px 4px;font-size:13px}
+  nav button.on{color:var(--acc);font-weight:800}
+  /* layar latihan */
+  #play{position:fixed;inset:0;background:var(--bg);z-index:10;display:flex;flex-direction:column;padding:calc(14px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom))}
+  #play .top{display:flex;justify-content:space-between;align-items:center;color:var(--mut);font-size:14px}
+  #play .top button{width:auto;padding:8px 12px}
+  #stage{flex:1;display:flex;flex-direction:column;justify-content:center;max-width:520px;width:100%;margin:0 auto}
+  .timer{height:6px;background:#37335f;border-radius:9px;overflow:hidden;margin-top:8px}
+  .timer>div{height:100%;background:var(--acc);width:100%}
+  .word{font-size:52px;font-weight:900;text-align:center;margin:24px 0;letter-spacing:2px}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .digit{font-size:80px;font-weight:900;text-align:center;min-height:110px}
+  .disp{font-size:34px;text-align:center;letter-spacing:6px;min-height:46px;margin:10px 0}
+  .key{font-size:26px;padding:16px}
+  .arena{height:260px;display:flex;align-items:center;justify-content:center}
+  .dot{width:130px;height:130px;border-radius:50%}
+  .read{font-size:18px;line-height:1.7;background:var(--card);padding:16px;border-radius:16px}
+  .opt{text-align:left;margin-bottom:8px}
+  .opt.ok{background:#166534}.opt.no{background:#7f1d1d}
+  .calm{width:160px;height:160px;border-radius:50%;margin:20px auto;background:radial-gradient(circle,#a78bfa66,#a78bfa08);animation:br 10s ease-in-out infinite}
+  @keyframes br{0%,100%{transform:scale(.6)}50%{transform:scale(1.15)}}
+  .big{font-size:44px;font-weight:900;text-align:center}
+  .bar{height:10px;background:#37335f;border-radius:99px;overflow:hidden;margin:4px 0 10px}
+  .bar>div{height:100%;background:var(--acc)}
+  .flash{animation:fl .25s}
+  @keyframes fl{0%{background:#4ade8033}100%{background:transparent}}
+  .flashbad{animation:fb .25s}
+  @keyframes fb{0%{background:#f8717144}100%{background:transparent}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🧠 Gym Otak</h1>
+  <div class="sub" id="hdr"></div>
+</header>
+<main>
+  <section id="tab-home">
+    <div class="card">
+      <h2>Latihan hari ini (±10 menit)</h2>
+      <div class="mut" style="margin-bottom:10px">Kerjakan berurutan. Selesai ≥3 latihan = streak aman 🔥</div>
+      <button class="pri" id="btnAll">▶ Mulai latihan harian</button>
+    </div>
+    <div id="exList"></div>
+  </section>
+
+  <section id="tab-prog" class="hide">
+    <div class="card"><h2>Rekor terbaik</h2><div id="best"></div></div>
+    <div class="card"><h2>7 hari terakhir</h2><div id="week"></div></div>
+    <div class="card">
+      <h2>Kenapa latihan ini?</h2>
+      <ul class="mut" style="padding-left:18px;margin:0;line-height:1.6">
+        <li><b>Warna Kata</b>: melatih kontrol diri (mengabaikan godaan)</li>
+        <li><b>Ingat Angka</b>: melatih memori kerja</li>
+        <li><b>Tahan Jari</b>: melatih menahan impuls, misalnya refleks mau scroll</li>
+        <li><b>Baca Pelan</b>: melatih fokus membaca panjang</li>
+        <li><b>Tahan Bosan</b>: melatih otak nyaman tanpa stimulasi</li>
+      </ul>
+    </div>
+    <button class="ghost" id="btnReset">Hapus semua data</button>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="home" class="on">🏋️ Latihan</button>
+  <button data-tab="prog">📈 Progres</button>
+</nav>
+
+<div id="play" class="hide">
+  <div class="top"><span id="pTitle"></span><button class="ghost" id="pQuit">✕ Keluar</button></div>
+  <div class="timer" id="pTimerWrap"><div id="pTimer"></div></div>
+  <div id="stage"></div>
+</div>
+
+<script>
+const TEST=new URLSearchParams(location.search).has('test'); // durasi singkat untuk uji otomatis
+const KEY='gymotak.v1';
+let db;try{db=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){db={}}
+db.days=db.days||{};db.lvl=db.lvl||{};db.best=db.best||{};
+const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
+const dayKey=(d=new Date())=>d.toLocaleDateString('sv-SE');
+const $=id=>document.getElementById(id);
+const rnd=n=>Math.floor(Math.random()*n);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const T=s=>TEST?Math.max(2,Math.round(s/10)):s; // detik
+
+const EX=[
+  {id:'stroop',ic:'🎨',name:'Warna Kata',desc:'Tap WARNA tulisan, bukan kata-nya',unit:'poin'},
+  {id:'digit', ic:'🔢',name:'Ingat Angka',desc:'Hafalkan deret angka, ketik ulang',unit:'digit'},
+  {id:'gonogo',ic:'✋',name:'Tahan Jari',desc:'Tap hijau, JANGAN tap merah',unit:'%'},
+  {id:'baca',  ic:'📖',name:'Baca Pelan',desc:'Baca 1 teks pendek, jawab 2 soal',unit:'%'},
+  {id:'bosan', ic:'🫧',name:'Tahan Bosan',desc:'Diam tanpa menyentuh layar',unit:'detik'}
+];
+
+// ---------- Home & progres ----------
+function today(){return db.days[dayKey()]||{}}
+function streak(){
+  let s=0;const d=new Date();
+  const ok=k=>Object.keys(db.days[k]||{}).length>=3;
+  if(!ok(dayKey(d)))d.setDate(d.getDate()-1);
+  while(ok(dayKey(d))){s++;d.setDate(d.getDate()-1)}
+  return s;
+}
+function renderHome(){
+  const t=today();
+  $('hdr').innerHTML=`🔥 Streak <b>${streak()}</b> hari · Hari ini <b>${Object.keys(t).length}/5</b> latihan`;
+  $('exList').innerHTML=EX.map(e=>{
+    const v=t[e.id];
+    return `<div class="card ex" data-ex="${e.id}"><div class="ic">${e.ic}</div><div class="tt"><b>${e.name}</b><div class="mut">${e.desc}</div></div>
+      <div class="sc ${v!=null?'done':''}">${v!=null?'✔ '+v+' '+e.unit:'▶'}</div></div>`}).join('');
+}
+$('exList').onclick=e=>{const c=e.target.closest('[data-ex]');if(c)runQueue([c.dataset.ex])};
+$('btnAll').onclick=()=>{const t=today();const q=EX.filter(e=>t[e.id]==null).map(e=>e.id);runQueue(q.length?q:EX.map(e=>e.id))};
+function renderProg(){
+  $('best').innerHTML=EX.map(e=>`<div class="ex" style="padding:6px 0"><div class="ic" style="font-size:22px">${e.ic}</div><div class="tt">${e.name}</div><div class="sc">${db.best[e.id]!=null?db.best[e.id]+' '+e.unit:'-'}</div></div>`).join('');
+  let w='';const d=new Date();
+  for(let i=0;i<7;i++){const k=dayKey(d),n=Object.keys(db.days[k]||{}).length;
+    w+=`<div class="mut">${d.toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short'})} — ${n}/5 latihan</div><div class="bar"><div style="width:${n*20}%"></div></div>`;
+    d.setDate(d.getDate()-1)}
+  $('week').innerHTML=w;
+}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  $('tab-home').classList.toggle('hide',b.dataset.tab!=='home');$('tab-prog').classList.toggle('hide',b.dataset.tab!=='prog');
+  b.dataset.tab==='prog'?renderProg():renderHome();
+});
+$('btnReset').onclick=()=>{if(confirm('Hapus semua data?')){db={days:{},lvl:{},best:{}};save();renderProg();renderHome()}};
+
+// ---------- Mesin latihan ----------
+let abort=false,timerRAF=null;
+$('pQuit').onclick=()=>{abort=true;closePlay()};
+function closePlay(){$('play').classList.add('hide');cancelAnimationFrame(timerRAF);renderHome()}
+const stage=()=>$('stage');
+function runTimer(sec){ // progress bar; resolve saat habis
+  $('pTimerWrap').classList.remove('hide');const end=Date.now()+sec*1000;
+  return new Promise(res=>{const f=()=>{if(abort)return res();const l=end-Date.now();$('pTimer').style.width=Math.max(0,l/(sec*10))+'%';if(l<=0)return res();timerRAF=requestAnimationFrame(f)};f()});
+}
+function intro(e){
+  return new Promise(res=>{
+    $('pTimerWrap').classList.add('hide');
+    stage().innerHTML=`<div class="center" style="text-align:center"><div style="font-size:64px">${e.ic}</div><h2>${e.name}</h2><p class="mut">${e.desc}</p><button class="pri" id="go">Mulai</button></div>`;
+    $('go').onclick=res;
+  });
+}
+function result(e,score,note){
+  return new Promise(res=>{
+    $('pTimerWrap').classList.add('hide');
+    const prev=db.best[e.id];const rec=prev==null||score>prev;
+    stage().innerHTML=`<div style="text-align:center"><div style="font-size:56px">${rec?'🏆':'💪'}</div><h2>${e.name}</h2>
+      <div class="big">${score} ${e.unit}</div><p class="mut">${note||''}${rec?'<br><b>Rekor baru!</b>':''}</p><button class="pri" id="next">Lanjut</button></div>`;
+    $('next').onclick=res;
+  });
+}
+async function runQueue(ids){
+  abort=false;$('play').classList.remove('hide');
+  for(const id of ids){
+    const e=EX.find(x=>x.id===id);$('pTitle').textContent=`${e.ic} ${e.name}`;
+    await intro(e);if(abort)return;
+    const r=await GAMES[id]();if(abort)return;
+    const k=dayKey();db.days[k]=db.days[k]||{};
+    db.days[k][id]=Math.max(db.days[k][id]??-Infinity,r.score);
+    db.best[id]=Math.max(db.best[id]??-Infinity,r.score);save();
+    await result(e,r.score,r.note);if(abort)return;
+  }
+  stage().innerHTML=`<div style="text-align:center"><div style="font-size:64px">🎉</div><h2>Latihan selesai!</h2><p class="mut">Otakmu barusan olahraga. Simpan HP sebentar.</p><button class="pri" id="fin">Kembali</button></div>`;
+  $('pTimerWrap').classList.add('hide');$('fin').onclick=closePlay;
+}
+
+// ---------- 1. Warna Kata (Stroop) ----------
+const COLORS=[['MERAH','#ef4444'],['BIRU','#3b82f6'],['HIJAU','#22c55e'],['KUNING','#facc15']];
+async function stroop(){
+  let ok=0,bad=0,cur;
+  stage().innerHTML=`<div class="word" id="w"></div><div class="g2" id="opts">${COLORS.map((c,i)=>`<button class="key" data-i="${i}">${c[0]}</button>`).join('')}</div><p class="mut" style="text-align:center">Tap <b>warna tinta</b>-nya</p>`;
+  const next=()=>{let w=rnd(4),c=rnd(4);if(Math.random()<.75)while(c===w)c=rnd(4);cur=c;$('w').textContent=COLORS[w][0];$('w').style.color=COLORS[c][1];$('w').dataset.ink=c};
+  $('opts').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;
+    if(+b.dataset.i===cur){ok++;stage().className='flash'}else{bad++;stage().className='flashbad'}
+    setTimeout(()=>stage().className='',250);next()};
+  next();await runTimer(T(45));
+  return {score:Math.max(0,ok-bad),note:`${ok} benar, ${bad} salah`};
+}
+
+// ---------- 2. Ingat Angka (digit span) ----------
+async function digit(){
+  let L=db.lvl.digit||4,best=0,strikes=0;
+  $('pTimerWrap').classList.add('hide');
+  while(strikes<2&&!abort){
+    const seq=Array.from({length:L},()=>rnd(10)).join('');window.__seq=seq;
+    stage().innerHTML=`<p class="mut" style="text-align:center">Hafalkan ${L} angka…</p><div class="digit" id="d"></div>`;
+    await sleep(600);
+    for(const ch of seq){if(abort)return{score:best};$('d').textContent=ch;await sleep(TEST?150:800);$('d').textContent='';await sleep(TEST?50:200)}
+    const ans=await new Promise(res=>{
+      let v='';
+      stage().innerHTML=`<p class="mut" style="text-align:center">Ketik ulang (${L} angka)</p><div class="disp" id="disp">_</div>
+        <div class="g3" id="pad">${[1,2,3,4,5,6,7,8,9,'⌫',0,'OK'].map(k=>`<button class="key" data-k="${k}">${k}</button>`).join('')}</div>`;
+      $('pad').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;const k=b.dataset.k;
+        if(k==='⌫')v=v.slice(0,-1);else if(k==='OK')return res(v);else if(v.length<L)v+=k;
+        $('disp').textContent=v||'_';if(v.length===L)setTimeout(()=>res(v),200)};
+    });
+    if(ans===seq){best=Math.max(best,L);L++;stage().innerHTML='<div class="big done">✔ Benar</div>'}
+    else{strikes++;stage().innerHTML=`<div class="big" style="color:var(--bad)">✘</div><p class="mut" style="text-align:center">Jawaban: ${seq}</p>`}
+    await sleep(TEST?100:900);
+  }
+  db.lvl.digit=Math.max(3,(best||L)-1);
+  return {score:best,note:'Deret terpanjang yang kamu ingat'};
+}
+
+// ---------- 3. Tahan Jari (Go/No-Go) ----------
+async function gonogo(){
+  let hit=0,miss=0,fa=0,cr=0,cur=null,tapped=false;
+  stage().innerHTML=`<p class="mut" style="text-align:center">🟢 tap secepatnya · 🔴 <b>jangan</b> disentuh</p><div class="arena" id="ar"><div class="dot" id="dot"></div></div>`;
+  $('ar').onpointerdown=()=>{if(cur==null||tapped)return;tapped=true;
+    if(cur==='g'){hit++;stage().className='flash'}else{fa++;stage().className='flashbad'}setTimeout(()=>stage().className='',250);$('dot').style.background='transparent'};
+  const end=Date.now()+T(45)*1000;runTimer(T(45));
+  while(Date.now()<end&&!abort){
+    cur=Math.random()<.72?'g':'r';tapped=false;$('dot').dataset.c=cur;
+    $('dot').style.background=cur==='g'?'#22c55e':'#ef4444';
+    await sleep(TEST?400:650);
+    if(!tapped){cur==='g'?miss++:cr++}
+    cur=null;$('dot').style.background='transparent';$('dot').dataset.c='';
+    await sleep((TEST?100:350)+rnd(TEST?100:500));
+  }
+  const tot=hit+miss+fa+cr;
+  return {score:tot?Math.round((hit+cr)/tot*100):0,note:`Hijau kena ${hit}, terlewat ${miss} · Merah tertahan ${cr}, kepencet ${fa}`};
+}
+
+// ---------- 4. Baca Pelan ----------
+const TEXTS=[
+ {t:`Di sebuah desa di lereng gunung, ada seorang penjual tahu bernama Pak Darto. Setiap pagi ia bangun pukul tiga untuk merendam kedelai. Ia tidak pernah memakai pengawet, sehingga tahunya hanya tahan satu hari. Karena itu ia sengaja membuat sedikit saja, cukup untuk dua ratus potong. Pembeli sering datang sebelum subuh agar tidak kehabisan. Suatu hari seorang pedagang dari kota menawarkan mesin besar agar Pak Darto bisa membuat seribu potong. Pak Darto menolak dengan sopan. Katanya, ia lebih suka tahu yang habis hari itu juga daripada tahu yang dibuang esok hari.`,
+  q:[['Kenapa tahu Pak Darto hanya tahan satu hari?',['Kedelainya murah','Tidak memakai pengawet','Dijual malam hari'],1],
+     ['Berapa potong tahu yang biasanya ia buat?',['Seratus','Dua ratus','Seribu'],1]]},
+ {t:`Gurita adalah hewan laut yang sangat cerdas. Ia punya tiga jantung dan darahnya berwarna biru karena mengandung tembaga. Sebagian besar sel sarafnya justru berada di lengan, bukan di kepala, sehingga tiap lengan bisa "berpikir" sendiri saat meraba makanan. Gurita juga ahli menyamar. Dalam hitungan detik, kulitnya bisa berubah warna dan tekstur menyerupai batu atau karang. Di beberapa akuarium, gurita pernah tercatat membuka tutup toples dan kabur dari tangkinya pada malam hari.`,
+  q:[['Kenapa darah gurita berwarna biru?',['Mengandung tembaga','Mengandung garam','Karena air laut'],0],
+     ['Di mana sebagian besar sel saraf gurita?',['Di kepala','Di jantung','Di lengan'],2]]},
+ {t:`Rina ingin menabung untuk membeli sepeda seharga satu juta rupiah. Ia membagi uang sakunya menjadi tiga bagian: separuh untuk makan, seperempat untuk ditabung, dan seperempat lagi untuk keperluan sekolah. Setiap minggu ia mendapat dua ratus ribu rupiah. Setelah dua bulan, Rina mulai bosan dan hampir memakai tabungannya untuk membeli mainan. Ibunya lalu menempel gambar sepeda impiannya di pintu lemari. Sejak itu, setiap kali tergoda, Rina melihat gambar itu dan menahan diri.`,
+  q:[['Berapa bagian uang saku yang Rina tabung?',['Separuh','Seperempat','Sepertiga'],1],
+     ['Apa yang membantu Rina menahan godaan?',['Gambar sepeda di lemari','Nasihat guru','Celengan baru'],0]]},
+ {t:`Kopi pertama kali dikenal di dataran tinggi Etiopia. Menurut sebuah legenda, seorang penggembala kambing melihat kambing-kambingnya menjadi sangat lincah setelah memakan buah merah dari sebuah semak. Ia membawa buah itu ke sebuah biara. Para biarawan merebusnya dan mendapati minuman tersebut membuat mereka tetap terjaga saat berdoa sampai larut malam. Dari sana, kopi menyebar ke Yaman, lalu ke seluruh dunia. Di Indonesia, kopi mulai ditanam secara besar-besaran pada masa kolonial Belanda.`,
+  q:[['Hewan apa yang ada dalam legenda kopi?',['Domba','Kambing','Unta'],1],
+     ['Ke mana kopi menyebar setelah Etiopia?',['Yaman','Belanda','India'],0]]},
+ {t:`Sebuah penelitian kecil meminta dua kelompok mahasiswa membaca artikel yang sama. Kelompok pertama membacanya dengan ponsel di atas meja, meski ponselnya dalam mode senyap. Kelompok kedua menitipkan ponsel di ruangan lain. Hasilnya, kelompok kedua mengingat lebih banyak isi artikel. Peneliti menduga bahwa otak tetap memakai sebagian tenaganya untuk "menahan diri" agar tidak mengecek ponsel, walaupun ponsel itu tidak berbunyi sama sekali.`,
+  q:[['Kelompok mana yang mengingat lebih banyak?',['Ponsel di meja','Ponsel di ruangan lain','Sama saja'],1],
+     ['Apa dugaan peneliti?',['Ponsel membuat bising','Otak memakai tenaga untuk menahan diri','Artikelnya terlalu sulit'],1]]}
+];
+async function baca(){
+  const i=(db.lvl.baca||0)%TEXTS.length,x=TEXTS[i];db.lvl.baca=i+1;
+  $('pTimerWrap').classList.add('hide');
+  const t0=Date.now();
+  await new Promise(res=>{stage().innerHTML=`<div class="read">${x.t}</div><p class="mut">Baca pelan, sekali saja. Tidak bisa kembali setelah lanjut.</p><button class="pri" id="rd">Sudah selesai baca</button>`;$('rd').onclick=res});
+  const secs=Math.round((Date.now()-t0)/1000);let ok=0;
+  for(const [q,opts,ans] of x.q){
+    await new Promise(res=>{
+      stage().innerHTML=`<h2>${q}</h2>${opts.map((o,j)=>`<button class="opt" data-j="${j}">${o}</button>`).join('')}`;
+      stage().onclick=ev=>{const b=ev.target.closest('.opt');if(!b)return;stage().onclick=null;
+        const j=+b.dataset.j;if(j===ans)ok++;b.classList.add(j===ans?'ok':'no');
+        stage().querySelectorAll('.opt')[ans].classList.add('ok');setTimeout(res,TEST?100:900)};
+    });
+  }
+  return {score:Math.round(ok/x.q.length*100),note:`${ok}/${x.q.length} benar · waktu baca ${secs} detik`};
+}
+
+// ---------- 5. Tahan Bosan ----------
+async function bosan(){
+  const target=TEST?3:(db.lvl.bosan||60);
+  stage().innerHTML=`<p class="mut" style="text-align:center">Lihat lingkaran. Napas pelan.<br><b>Jangan sentuh layar, jangan keluar dari app.</b></p><div class="calm"></div><div class="big" id="bs">0</div><p class="mut" style="text-align:center">Target: ${target} detik</p>`;
+  const t0=Date.now();let failed=false;
+  const fail=()=>{failed=true};
+  const onVis=()=>{if(document.hidden)fail()};
+  document.addEventListener('visibilitychange',onVis);stage().addEventListener('pointerdown',fail);
+  runTimer(target);
+  while(!failed&&!abort&&Date.now()-t0<target*1000){$('bs').textContent=Math.floor((Date.now()-t0)/1000);await sleep(200)}
+  document.removeEventListener('visibilitychange',onVis);stage().removeEventListener('pointerdown',fail);
+  const held=Math.min(target,Math.floor((Date.now()-t0)/1000));
+  if(!failed&&!TEST)db.lvl.bosan=Math.min(300,target+15);
+  return {score:held,note:failed?'Tersentuh/keluar, coba lagi besok 🙂':`Berhasil! Besok target ${Math.min(300,target+15)} detik`};
+}
+const GAMES={stroop,digit,gonogo,baca,bosan};
+
+renderHome();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
