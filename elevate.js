@@ -12,7 +12,9 @@ const shuf=a=>[...a].sort(()=>Math.random()-.5);
 const gpOf=()=>db.gp||(db.gp={});
 const MAXL=20;
 // Level 1-10: tiap 2 kemenangan (>=2 bintang); level 11-20: tiap 3 kemenangan
-const gl=id=>{const n=gpOf()[id]||0;return Math.min(MAXL,n<18?1+Math.floor(n/2):10+Math.floor((n-18)/3))};
+const glReal=id=>{const n=gpOf()[id]||0;return Math.min(MAXL,n<18?1+Math.floor(n/2):10+Math.floor((n-18)/3))};
+// level yang dipakai main: pilihan manual (db.pick) atau otomatis sesuai progres
+const gl=id=>{const p=(db.pick||{})[id];return p?Math.min(MAXL,Math.max(1,p)):glReal(id)};
 function perfOf(e,r){
   if(e.id==='bosan')return Math.min(100,Math.round(r.score/Math.max(1,r.target||60)*100));
   const g=e.stars?e.stars[2]:100;return Math.min(100,Math.round(r.score/g*100));
@@ -36,10 +38,10 @@ const ACH=[
  ['👑','Skor Ahli (EPQ 700+)',()=>SKILLS.some(s=>(epq(s.id)||0)>=700)],['🗣️','Sesi bicara pertama',()=>((db.talk||{}).hist||[]).length>=1]];
 function checkAch(){db.ach=db.ach||[];const n=ACH.filter(a=>a[2]()&&!db.ach.includes(a[1]));n.forEach(a=>db.ach.push(a[1]));if(n.length)setTimeout(()=>toast('🏅 Pencapaian baru: '+n.map(a=>a[0]+' '+a[1]).join(', '),3500),900);}
 function afterGame(e,r){
-  const before=gl(e.id);if(r.stars>=2)gpOf()[e.id]=(gpOf()[e.id]||0)+1;
-  db.perf=db.perf||{};const a=db.perf[e.id]=db.perf[e.id]||[];a.push({p:perfOf(e,r),l:before,t:Date.now()});if(a.length>10)a.shift();
+  const played=gl(e.id),before=glReal(e.id);if(r.stars>=2)gpOf()[e.id]=(gpOf()[e.id]||0)+1;
+  db.perf=db.perf||{};const a=db.perf[e.id]=db.perf[e.id]||[];a.push({p:perfOf(e,r),l:played,t:Date.now()});if(a.length>10)a.shift();
   db.plays=(db.plays||0)+1;if(r.stars===3)db.s3=(db.s3||0)+1;
-  const after=gl(e.id);if(after>before)r.gUp=`⬆️ ${e.name} Level ${after}`;
+  const after=glReal(e.id);if(after>before)r.gUp=`⬆️ ${e.name} Level ${after}`;
   save();checkAch();
 }
 function afterTalk(r,lvl){
@@ -295,7 +297,7 @@ window.renderProg=function(){
   <div class="card"><h2>📅 7 hari terakhir</h2>${w}</div>`;
 };
 
-Object.assign(window,{gl,afterGame,afterTalk,todayWorkout});
+Object.assign(window,{gl,glReal,MAXL,afterGame,afterTalk,todayWorkout});
 $('btnAll').onclick=()=>{const t=today(),ids=todayWorkout(),q=ids.filter(i=>t[i]==null);runQueue(q.length?q:ids)};
 $('tab-games').onclick=ev=>{const c=ev.target.closest('[data-ex]');if(c)runQueue([c.dataset.ex])};
 boot();

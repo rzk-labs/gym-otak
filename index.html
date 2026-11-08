@@ -168,7 +168,8 @@
       <div class="row"><span>📳 Getar (Android)</span><button class="switch" id="swVib" aria-label="Getar"></button></div>
       <div class="row"><span>🔧 Cek perangkat<br><span class="mut" style="font-size:12px">tes mikrofon & suara di HP ini</span></span><button class="small ghost" id="devChk">Tes</button></div>
       <div id="devOut" class="tip hide"></div>
-      <div class="row"><span>Lihat panduan awal lagi</span><button class="small ghost" id="reOnb">Buka</button></div>
+      <div class="row"><span>ℹ️ Versi<br><span class="mut" style="font-size:12px">v7 · level game 1-20, pilih level manual di layar sebelum main</span></span><b>v7</b></div>
+      <div class="row"><span>Lihat panduan awal lagi<button class="small ghost" id="reOnb">Buka</button></div>
     </div>
     <div class="card">
       <h2>🤔 Kenapa latihan ini?</h2>
@@ -370,8 +371,14 @@ function intro(e){
   return new Promise(res=>{hideTimer();
     stage().innerHTML=`<div class="center"><div class="bigic">${e.ic}</div><h2 style="font-size:24px">${e.name}</h2>
       <div class="how"><b>Cara main</b><ol>${e.how.map(h=>`<li>${h}</li>`).join('')}</ol><div class="demo">${e.demo}</div></div>
-      <p class="mut">Level game: <b>${gl(e.id)}</b>/20</p>${db.best[e.id]!=null?`<p class="mut">Rekor kamu: <b>${db.best[e.id]} ${e.unit}</b></p>`:''}
+      <p class="mut">Level game: <b id="lvNow">${gl(e.id)}</b>/20 <span id="lvAuto">${(db.pick||{})[e.id]?'(pilihan kamu)':'(otomatis)'}</span></p>
+      <p class="mut" style="margin:4px 0">Mau lebih sulit? Pilih level:
+        <select id="lvPick" style="font-size:16px;padding:6px 8px;border-radius:10px;background:var(--card2);color:var(--tx);border:1px solid #37335f">
+          <option value="0">Otomatis (Lv ${glReal(e.id)})</option>${Array.from({length:20},(_,i)=>`<option value="${i+1}" ${(db.pick||{})[e.id]===i+1?'selected':''}>Level ${i+1}</option>`).join('')}
+        </select></p>${db.best[e.id]!=null?`<p class="mut">Rekor kamu: <b>${db.best[e.id]} ${e.unit}</b></p>`:''}
       <button class="pri" id="go">Siap! ▶</button></div>`;
+    $('lvPick').onchange=ev=>{const v=+ev.target.value;db.pick=db.pick||{};if(v)db.pick[e.id]=v;else delete db.pick[e.id];save();
+      $('lvNow').textContent=gl(e.id);$('lvAuto').textContent=v?'(pilihan kamu)':'(otomatis)'};
     $('go').onclick=res;
   });
 }
