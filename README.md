@@ -5,4 +5,4 @@ PWA latihan otak harian (~10 menit) untuk memperbaiki brainrot: Warna Kata (Stro
 Data di localStorage HP. File statis tanpa build. Tambah `?test` di URL untuk durasi singkat (uji otomatis).
 
 ## v3: Latihan Bicara (gagap)
-Tab 🗣️ Bicara: tangga 7 level (kata lembut → frasa pelan → kalimat & jeda → baca bareng → cerita sendiri → tanya jawab → misi dunia nyata). Sesi ±5 menit: napas → latihan level → nilai diri (😣🙂😊). Naik level setelah 3 sesi rata-rata ≥🙂. Progres: streak, minggu ini, grafik rasa nyaman, estimasi waktu. Bukan pengganti terapis wicara.
+Tab 🗣️ Bicara: tangga 21 level (7 tahap x 3 tingkat Mudah/Sedang/Sulit) (kata lembut → frasa pelan → kalimat & jeda → baca bareng → cerita sendiri → tanya jawab → misi dunia nyata). Sesi ±5 menit: napas → latihan level → nilai diri (😣🙂😊). Naik level setelah 3 sesi rata-rata ≥🙂. Progres: streak, minggu ini, grafik rasa nyaman, estimasi waktu. Bukan pengganti terapis wicara.
