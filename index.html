@@ -551,7 +551,7 @@ let MIC=null;
 async function micStart(){
   MIC=null;if(!db.mic)return;
   try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-    const ctx=new (window.AudioContext||window.webkitAudioContext)();const an=ctx.createAnalyser();an.fftSize=1024;ctx.createMediaStreamSource(stream).connect(an);
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();try{await ctx.resume()}catch(e){}const an=ctx.createAnalyser();an.fftSize=1024;ctx.createMediaStreamSource(stream).connect(an);
     MIC={stream,ctx,an,buf:new Uint8Array(an.fftSize),speech:0,pauses:0,inSp:false,sil:0,had:false,lv:0,last:performance.now(),th:.035,
       iv:setInterval(micTick,80)};
   }catch(e){db.mic=false;save();toast('Mikrofon tidak diizinkan. Latihan lanjut tanpa mikrofon 🙂',3500)}
