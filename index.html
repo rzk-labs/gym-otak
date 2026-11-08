@@ -163,6 +163,8 @@
       <div class="row"><span>Nama panggilan</span><button class="small ghost" id="setName"></button></div>
       <div class="row"><span>🔊 Suara</span><button class="switch" id="swSound" aria-label="Suara"></button></div>
       <div class="row"><span>📳 Getar (Android)</span><button class="switch" id="swVib" aria-label="Getar"></button></div>
+      <div class="row"><span>🔧 Cek perangkat<br><span class="mut" style="font-size:12px">tes mikrofon & suara di HP ini</span></span><button class="small ghost" id="devChk">Tes</button></div>
+      <div id="devOut" class="tip hide"></div>
       <div class="row"><span>Lihat panduan awal lagi</span><button class="small ghost" id="reOnb">Buka</button></div>
     </div>
     <div class="card">
@@ -321,6 +323,20 @@ $('swSound').onclick=()=>{db.sound=!db.sound;save();renderSet();sfx.good()};
 $('swVib').onclick=()=>{db.vib=!db.vib;save();renderSet();vib(60)};
 $('setName').onclick=()=>{const n=prompt('Nama panggilan:',db.name||'');if(n!=null){db.name=n.trim().slice(0,20);save();renderSet();renderHome()}};
 $('reOnb').onclick=()=>onboarding();
+$('devChk').onclick=async()=>{
+  const o=$('devOut');o.classList.remove('hide');const L=[];const show=()=>o.innerHTML=L.join('<br>');
+  L.push('⏳ Memeriksa…');show();L.length=0;
+  // suara
+  try{tone(660,.15);L.push('🔊 Bunyi app: terdengar? (kalau tidak, cek tombol silent iPhone)')}catch(e){L.push('❌ Bunyi app gagal')}
+  // TTS
+  if(!hasTTS())L.push('❌ Suara contoh tidak didukung browser ini');
+  else{let v=speechSynthesis.getVoices();if(!v.length){await sleep(600);v=speechSynthesis.getVoices()}
+    const id=v.filter(x=>/^id/i.test(x.lang));L.push(id.length?'✅ Suara Indonesia ada ('+id[0].name+')':'⚠️ Suara Indonesia tidak ada. 🔊 contoh akan memakai suara lain (Pengaturan iPhone → Aksesibilitas → Konten Lisan → Suara → Indonesia)');speak('Halo, apa kabar')}
+  // mic
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia))L.push('❌ Mikrofon tidak didukung di sini (buka lewat Safari / app layar utama)');
+  else{try{const st=await navigator.mediaDevices.getUserMedia({audio:true});st.getTracks().forEach(t=>t.stop());L.push('✅ Mikrofon diizinkan')}catch(e){L.push('❌ Mikrofon ditolak ('+(e.name||'error')+'). Latihan tetap jalan tanpa mikrofon.')}}
+  L.push(navigator.vibrate?'✅ Getar didukung':'ℹ️ Getar tidak didukung (normal di iPhone)');
+  show()};
 $('btnReset').onclick=async()=>{if(await confirmBox('Hapus semua progres, XP, dan rekor?','Hapus')){const k={name:db.name,sound:db.sound,vib:db.vib,onb:true};db={days:{},lvl:{},best:{},xp:0,talk:{lvl:1,sess:[],hist:[]},...k};save();renderSet();toast('Data dihapus')}};
 
 // ---------- Onboarding ----------
