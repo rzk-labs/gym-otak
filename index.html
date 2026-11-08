@@ -673,8 +673,8 @@ const TALK=[
     while(!stop&&!abort&&Date.now()-t0<T([45,60,90][s])*1000){$('ts').textContent=Math.floor((Date.now()-t0)/1000)+' dtk';const c=Math.floor((Date.now()-t0)/(TEST?300:9000))%cues.length;if(c!==ci){ci=c;$('cue').textContent=cues[c]}await sleep(250)}
     res()})},
  {i:6,ic:'🎤',name:'Tanya Jawab',eq:'Tahap percakapan terstruktur',eta:'±3 minggu',
-  how:['Pertanyaan muncul. Jawab <b>keras</b> dengan 1-2 kalimat.','Jangan siapkan jawaban sempurna, pelan saja.','3 pertanyaan.'],
-  run:async()=>{const q=pick(QS,[2,3,4][s]);for(let i=0;i<q.length;i++){if(abort)return;
+  how:['Pertanyaan muncul. Jawab <b>keras</b> dengan 1-2 kalimat.','Jangan siapkan jawaban sempurna, pelan saja.','2-4 pertanyaan, makin banyak di tahap sulit.'],
+  run:async(s)=>{const q=pick(QS,[2,3,4][s]);for(let i=0;i<q.length;i++){if(abort)return;
     await new Promise(res=>{stage().innerHTML=`<div class="center"><p class="mut">Pertanyaan ${i+1}/${q.length}</p><h2 style="font-size:26px;margin:24px 0">${q[i]}</h2><p class="mut">Tarik napas → mulai lembut → jawab pelan.</p><button class="pri" id="ans">Sudah kujawab ✓</button></div>`;$('ans').onclick=()=>{sfx.good();vib(15);res()}})}}},
  {i:7,ic:'🌍',name:'Dunia Nyata',eq:'Tahap transfer ke kehidupan sehari-hari',eta:'berkelanjutan (inti hasilnya di sini)',
   how:['Pilih 1 misi kecil di dunia nyata hari ini.','Siapkan, lalu lakukan sungguhan.','Lapor di sini, berhasil atau belum, sama-sama dihitung.'],
