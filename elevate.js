@@ -10,7 +10,9 @@ const shuf=a=>[...a].sort(()=>Math.random()-.5);
 
 // ---------- level per game, skor (EPQ), pencapaian ----------
 const gpOf=()=>db.gp||(db.gp={});
-const gl=id=>Math.min(10,1+Math.floor((gpOf()[id]||0)/2));
+const MAXL=20;
+// Level 1-10: tiap 2 kemenangan (>=2 bintang); level 11-20: tiap 3 kemenangan
+const gl=id=>{const n=gpOf()[id]||0;return Math.min(MAXL,n<18?1+Math.floor(n/2):10+Math.floor((n-18)/3))};
 function perfOf(e,r){
   if(e.id==='bosan')return Math.min(100,Math.round(r.score/Math.max(1,r.target||60)*100));
   const g=e.stars?e.stars[2]:100;return Math.min(100,Math.round(r.score/g*100));
@@ -20,7 +22,8 @@ function epq(sk){
   const P=db.perf||{};let a=[];gamesOf(sk).forEach(id=>(P[id]||[]).forEach(x=>a.push(x)));
   if(!a.length)return null;a.sort((x,y)=>x.t-y.t);a=a.slice(-6);
   const p=a.reduce((s,x)=>s+x.p,0)/a.length,l=a.reduce((s,x)=>s+x.l,0)/a.length;
-  return Math.min(1000,Math.round(p*10*(0.6+0.04*l)));
+  const le=l<=10?l:10+(l-10)/4;
+  return Math.min(1000,Math.round(p*10*(0.6+0.04*le)));
 }
 const tier=e=>e<300?'Pemula':e<500?'Berkembang':e<700?'Mahir':e<850?'Ahli':'Master';
 function overall(){const v=SKILLS.map(s=>epq(s.id)).filter(x=>x!=null);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):null}
@@ -29,6 +32,7 @@ const ACH=[
  ['🔥','Streak 3 hari',()=>streak()>=3],['🌟','Streak 7 hari',()=>streak()>=7],
  ['🧩','Coba 7 game berbeda',()=>Object.keys(db.perf||{}).filter(k=>k!=='talk').length>=7],['🏅','Coba semua game',()=>EX.every(e=>(db.perf||{})[e.id])],
  ['🥇','3 bintang pertama',()=>(db.s3||0)>=1],['⬆️','Game Level 5',()=>EX.some(e=>gl(e.id)>=5)],['🚀','Game Level 10',()=>EX.some(e=>gl(e.id)>=10)],
+ ['💎','Game Level 15',()=>EX.some(e=>gl(e.id)>=15)],['🏆','Game Level 20 (MAX)',()=>EX.some(e=>gl(e.id)>=MAXL)],['🎓','Semua game Level 5',()=>EX.every(e=>gl(e.id)>=5)],
  ['👑','Skor Ahli (EPQ 700+)',()=>SKILLS.some(s=>(epq(s.id)||0)>=700)],['🗣️','Sesi bicara pertama',()=>((db.talk||{}).hist||[]).length>=1]];
 function checkAch(){db.ach=db.ach||[];const n=ACH.filter(a=>a[2]()&&!db.ach.includes(a[1]));n.forEach(a=>db.ach.push(a[1]));if(n.length)setTimeout(()=>toast('🏅 Pencapaian baru: '+n.map(a=>a[0]+' '+a[1]).join(', '),3500),900);}
 function afterGame(e,r){
@@ -64,7 +68,18 @@ function genMath(L){
   else if(L<=4){op=['+','-'][rnd(2)];a=ri(12,60);b=ri(8,40);if(op==='-'&&b>a)[a,b]=[b,a]}
   else if(L<=6){op=['×','+','-'][rnd(3)];if(op==='×'){a=ri(2,9);b=ri(2,9)}else{a=ri(30,99);b=ri(12,70);if(op==='-'&&b>a)[a,b]=[b,a]}}
   else if(L<=8){op=['×','×','+','-'][rnd(4)];if(op==='×'){a=ri(6,12);b=ri(6,15)}else{a=ri(100,399);b=ri(40,250);if(op==='-'&&b>a)[a,b]=[b,a]}}
-  else{op=['×','÷','+','-'][rnd(4)];if(op==='×'){a=ri(11,25);b=ri(6,19)}else if(op==='÷'){b=ri(4,15);ans=ri(6,25);a=b*ans}else{a=ri(250,999);b=ri(120,700);if(op==='-'&&b>a)[a,b]=[b,a]}}
+  else if(L<=10){op=['×','÷','+','-'][rnd(4)];if(op==='×'){a=ri(11,25);b=ri(6,19)}else if(op==='÷'){b=ri(4,15);ans=ri(6,25);a=b*ans}else{a=ri(250,999);b=ri(120,700);if(op==='-'&&b>a)[a,b]=[b,a]}}
+  else{ // level 11-20: soal dua langkah
+    let txt;
+    if(L<=14){const x=ri(3,12),y=ri(3,12),z=ri(10,99);if(rnd(2)){ans=x*y+z;txt=`${x} × ${y} + ${z}`}else{const zz=Math.min(z,x*y-1);ans=x*y-zz;txt=`${x} × ${y} − ${zz}`}}
+    else if(L<=17){const x=ri(5,30),y=ri(5,30),z=ri(3,12);ans=(x+y)*z;txt=`(${x} + ${y}) × ${z}`}
+    else{const m=rnd(3);
+      if(m===0){const x=ri(12,30),y=ri(6,19),z=ri(11,25),w=ri(4,15);ans=x*y+z*w;txt=`${x} × ${y} + ${z} × ${w}`}
+      else if(m===1){const d=ri(6,15),q=ri(12,40),z=ri(20,99);ans=q+z;txt=`${d*q} ÷ ${d} + ${z}`}
+      else{const x=ri(15,40),y=ri(15,40),z=ri(3,9);ans=Math.abs(x-y)*z;txt=`|${x} − ${y}| × ${z}`}}
+    const set=new Set([ans]);let g=0;while(set.size<4&&g++<80){const d=[1,-1,2,-2,10,-10,5,-5,20,-20,11,-11][rnd(12)];if(ans+d>=0)set.add(ans+d)}let k=1;while(set.size<4)set.add(ans+100+k++);
+    return {p:big(`${txt} = ?`),o:shuf([...set]).map(v=>({t:v,ok:v===ans}))};
+  }
   if(ans==null)ans=op==='+'?a+b:op==='-'?a-b:a*b;
   const set=new Set([ans]);let guard=0;
   while(set.size<4&&guard++<60){const d=[1,-1,2,-2,10,-10,3,-3,5,-5][rnd(10)];const v=ans+d;if(v>=0)set.add(v)}
@@ -79,7 +94,15 @@ function genBig(L){
   if(L<=2){va=ri(1,99);do{vb=ri(1,99)}while(vb===va);A=va;B=vb}
   else if(L<=5){va=ri(100,999);do{vb=va+ri(-40,40)}while(vb===va||vb<100);A=va;B=vb}
   else if(L<=8){const x=ri(3,12),y=ri(3,12);va=x*y;do{vb=va+ri(-9,9)}while(vb===va||vb<1);A=`${x} × ${y}`;B=vb;if(Math.random()<.5)[A,B,va,vb]=[B,A,vb,va]}
-  else{let p,q,r2,s;do{q=ri(3,9);p=ri(1,q-1);s=ri(3,9);r2=ri(1,s-1);va=p/q;vb=r2/s}while(Math.abs(va-vb)<.001||Math.abs(va-vb)>.2);A=`${p}/${q}`;B=`${r2}/${s}`}
+  else if(L<=10){let p,q,r2,s;do{q=ri(3,9);p=ri(1,q-1);s=ri(3,9);r2=ri(1,s-1);va=p/q;vb=r2/s}while(Math.abs(va-vb)<.001||Math.abs(va-vb)>.2);A=`${p}/${q}`;B=`${r2}/${s}`}
+  else if(L<=14){ // dua perkalian yang selisihnya tipis
+    let x,y,z,w;do{x=ri(6,19);y=ri(6,19);z=ri(6,19);w=ri(6,19);va=x*y;vb=z*w}while(Math.abs(va-vb)<1||Math.abs(va-vb)>12);
+    A=`${x} × ${y}`;B=`${z} × ${w}`;if(Math.random()<.5)[A,B,va,vb]=[B,A,vb,va]}
+  else if(L<=17){ // pecahan vs desimal
+    let p,q;do{q=ri(3,12);p=ri(1,q-1);va=p/q;vb=Math.round(va*100+ri(-8,8))/100}while(Math.abs(va-vb)<.004||vb<=0||vb>=1);
+    A=`${p}/${q}`;B=String(vb).replace('.',',');if(Math.random()<.5)[A,B,va,vb]=[B,A,vb,va]}
+  else{ // pecahan dengan selisih sangat tipis
+    let p,q,r2,s;do{q=ri(5,16);p=ri(2,q-1);s=ri(5,16);r2=ri(2,s-1);va=p/q;vb=r2/s}while(q===s||Math.abs(va-vb)<.002||Math.abs(va-vb)>.05);A=`${p}/${q}`;B=`${r2}/${s}`}
   return {p:`<p class="mut center">Mana yang <b>LEBIH BESAR</b>?</p>`,o:[{t:A,ok:va>vb},{t:B,ok:vb>va}],btn:'font-size:30px;padding:34px 6px'};
 }
 async function besar(){const L=gl('besar');return quiz(()=>genBig(L),'Tap yang lebih besar')}
@@ -90,7 +113,14 @@ const SYN=[['cantik','elok',['kotor','sempit']],['pintar','cerdas',['malas','lem
  ['hening','sunyi',['gaduh','ramai']],['pelit','kikir',['dermawan','boros']],['jelas','gamblang',['kabur','rumit']],['percaya','yakin',['ragu','curiga']],
  ['bingung','bimbang',['paham','yakin']],['teliti','cermat',['ceroboh','santai']],['sabar','tabah',['gegabah','murka']],['ahli','pakar',['pemula','murid']],
  ['indah','permai',['buruk','kumuh']],['hebat','dahsyat',['biasa','lesu']],['tinggi','jangkung',['pendek','sempit']],['rumah','kediaman',['kantor','toko']],
- ['mula','awal',['akhir','tengah']],['musnah','lenyap',['muncul','tumbuh']],['lugas','terus terang',['berbelit','ragu']],['mutakhir','terbaru',['kuno','lampau']]];
+ ['mula','awal',['akhir','tengah']],['musnah','lenyap',['muncul','tumbuh']],['lugas','terus terang',['berbelit','ragu']],['mutakhir','terbaru',['kuno','lampau']],
+ ['senang','gembira',['murung','jemu']],['cepat','laju',['pelan','santai']],['besar','raya',['kecil','sedikit']],['miskin','papa',['kaya','mewah']],
+ ['sombong','angkuh',['rendah hati','ramah']],['bagus','apik',['jelek','kasar']],['pandai','mahir',['bodoh','lalai']],['luas','lapang',['sempit','padat']],
+ ['lelah','penat',['segar','bugar']],['mustahil','tidak mungkin',['pasti','lumrah']],['gigih','tekun',['malas','lengah']],['bijak','arif',['bebal','nekat']],
+ ['membantah','menyanggah',['menyetujui','menurut']],['menolong','membantu',['merintangi','mengabaikan']],['kokoh','teguh',['goyah','longgar']],['aman','selamat',['terancam','genting']],
+ ['hemat','irit',['royal','berlebihan']],['asli','murni',['tiruan','palsu']],['nyata','konkret',['abstrak','khayal']],['wajar','lazim',['ganjil','aneh']],
+ ['lamban','lambat',['gesit','sigap']],['fasih','lancar',['terbata','kaku']],['dermawan','murah hati',['kikir','tamak']],['rancu','kacau',['teratur','jelas']],
+ ['sukses','berhasil',['gagal','tertunda']],['gundah','resah',['tenteram','lega']],['tangguh','ulet',['rapuh','manja']],['lengkap','paripurna',['kurang','cacat']]];
 async function sinonim(){
   const L=gl('sinonim'),pool=SYN.slice(0,Math.min(SYN.length,10+L*2));
   return quiz(()=>{const [w,s,d]=pool[rnd(pool.length)];return {p:`<p class="mut center">Persamaan kata dari:</p>${big(w)}`,o:shuf([{t:s,ok:true},{t:d[0],ok:false},{t:d[1],ok:false}]),cols:1}},'Pilih kata yang sama arti');
@@ -99,21 +129,29 @@ async function sinonim(){
 // 4. Ejaan Benar
 const EJA=[['apotek','apotik'],['atlet','atlit'],['izin','ijin'],['risiko','resiko'],['objek','obyek'],['sistem','sistim'],['teknik','tehnik'],['silakan','silahkan'],
  ['nasihat','nasehat'],['kualitas','kwalitas'],['praktik','praktek'],['antre','antri'],['telepon','telpon'],['standar','standard'],['frekuensi','frekwensi'],
- ['hakikat','hakekat'],['subjek','subyek'],['hierarki','hirarki'],['jenazah','jenasah'],['kuitansi','kwitansi'],['azan','adzan'],['aktivitas','aktifitas'],['konsekuen','konsekwen'],['sah','syah']];
+ ['hakikat','hakekat'],['subjek','subyek'],['hierarki','hirarki'],['jenazah','jenasah'],['kuitansi','kwitansi'],['azan','adzan'],['aktivitas','aktifitas'],['konsekuen','konsekwen'],['sah','syah'],
+ ['analisis','analisa'],['andal','handal'],['asas','azas'],['cenderamata','cinderamata'],['detail','detil'],['ekstrem','ekstrim'],['familier','familiar'],['gizi','gisi'],
+ ['jadwal','jadual'],['kaidah','kaedah'],['lembap','lembab'],['metode','metoda'],['napas','nafas'],['nuklir','nuklear'],['objektif','obyektif'],['paham','faham'],
+ ['persen','prosen'],['pikir','fikir'],['sekadar','sekedar'],['rezeki','rejeki'],['tahu','tau'],
+ ['teknologi','tehnologi'],['zaman','jaman'],['mengubah','merubah'],['memengaruhi','mempengaruhi'],['mencolok','menyolok']];
 async function ejaan(){
-  const L=gl('ejaan'),pool=EJA.slice(0,L<=3?10:L<=6?18:EJA.length);
+  const L=gl('ejaan'),pool=EJA.slice(0,L<=3?10:L<=6?18:L<=10?30:EJA.length);
   return quiz(()=>{const [b,s]=pool[rnd(pool.length)];return {p:`<p class="mut center">Mana ejaan yang <b>BENAR</b>?</p><div style="height:30px"></div>`,o:shuf([{t:b,ok:true},{t:s,ok:false}]),btn:'font-size:24px;padding:28px 6px'}},'Pilih ejaan baku');
 }
 
 // 5. Pola Angka
 function genPola(L){
-  const T=L<=3?[0]:L<=5?[0,1,2]:L<=7?[1,2,3,4]:[2,3,4,5],t=T[rnd(T.length)];let s=[];
+  const T=L<=3?[0]:L<=5?[0,1,2]:L<=7?[1,2,3,4]:L<=10?[2,3,4,5]:L<=14?[3,4,5,6,7]:[5,6,7,8,9],t=T[rnd(T.length)];let s=[];
   if(t===0){const a=ri(1,20),d=ri(2,9);s=[0,1,2,3,4].map(i=>a+i*d)}
   else if(t===1){const a=ri(1,4),r=ri(2,3);s=[0,1,2,3,4].map(i=>a*r**i)}
   else if(t===2){const a=ri(1,10),x=ri(2,6),y=ri(2,9);s=[a];for(let i=0;i<4;i++)s.push(s[i]+(i%2?y:x))}
   else if(t===3){const n=ri(1,6);s=[0,1,2,3,4].map(i=>(n+i)**2)}
   else{const a=ri(1,10);s=[a];for(let i=1;i<5;i++)s.push(s[i-1]+i)}
   if(t===5){const x=ri(1,5),y=ri(1,5);s=[x,y];for(let i=2;i<5;i++)s.push(s[i-1]+s[i-2])}
+  else if(t===6){const a=ri(3,6),m=ri(2,3),c=ri(1,4)*(rnd(2)?1:-1);s=[a];for(let i=1;i<5;i++)s.push(s[i-1]*m+c)} // kali lalu tambah/kurang
+  else if(t===7){const a=ri(1,12),b=ri(20,40),x=ri(2,6),y=ri(2,6);s=[a,b,a+x,b+y,a+2*x]} // dua deret berselang-seling
+  else if(t===8){const n=ri(1,4);s=[0,1,2,3,4].map(i=>(n+i)**3)} // pangkat tiga
+  else if(t===9){const a=ri(1,5),d=ri(2,4),e=ri(1,3);s=[a];let step=d;for(let i=1;i<5;i++){s.push(s[i-1]+step);step+=e}} // selisihnya ikut naik
   const ans=s[4],set=new Set([ans]);let g=0;while(set.size<4&&g++<60){const v=ans+[1,-1,2,-2,3,-3,4,-4,5,-5,10][rnd(11)];if(v>0)set.add(v)}let k=1;while(set.size<4)set.add(ans+50+k++);
   return {p:`<p class="mut center">Angka berikutnya?</p>${big(s.slice(0,4).join(' , ')+' , ?')}`,o:shuf([...set]).map(v=>({t:v,ok:v===ans}))};
 }
@@ -121,11 +159,12 @@ async function pola(){const L=gl('pola');return quiz(()=>genPola(L),'Temukan pol
 
 // 6. Cari Ganjil
 const GAN=[['🙂','🙃'],['😀','😃'],['🕐','🕑'],['🐶','🐕'],['💙','💜'],['🍎','🍅'],['🔺','🔻'],['🌕','🌖'],['🟦','🟪'],['🔵','🟣']];
+const GAN2=[['🕐','🕜'],['😊','☺️'],['🌖','🌗'],['🔶','🔸'],['🟥','🟧'],['🐱','🐈'],['💚','💛'],['🌑','🌚'],['🔷','🔹'],['⬛','◼️']]; // pasangan makin mirip (level 11+)
 async function ganjil(){
-  const L=gl('ganjil'),n=Math.min(6,3+Math.floor((L-1)/2));let ok=0,bad=0,combo=0,maxC=0;
+  const L=gl('ganjil'),n=Math.min(8,3+Math.floor((L-1)/2)),GP=L>=11?GAN.concat(GAN2):GAN;let ok=0,bad=0,combo=0,maxC=0;
   stage().innerHTML=`<div class="combo" id="cb"></div><p class="mut center">Tap emoji yang <b>berbeda</b> · <span id="sc">0</span> benar</p><div id="gg" class="g3" style="max-width:360px;margin:8px auto"></div>`;
-  const next=()=>{const [a,b]=GAN[rnd(GAN.length)],sw=Math.random()<.5,odd=rnd(n*n),g=$('gg');g.style.gridTemplateColumns=`repeat(${n},1fr)`;
-    g.innerHTML=Array.from({length:n*n},(_,i)=>`<button class="key" data-o="${i===odd?1:0}" style="font-size:${n>=5?26:34}px;padding:${n>=5?6:12}px 0">${(i===odd)!==sw?b:a}</button>`).join('')};
+  const next=()=>{const [a,b]=GP[rnd(GP.length)],sw=Math.random()<.5,odd=rnd(n*n),g=$('gg');g.style.gridTemplateColumns=`repeat(${n},1fr)`;
+    g.innerHTML=Array.from({length:n*n},(_,i)=>`<button class="key" data-o="${i===odd?1:0}" style="font-size:${n>=7?20:n>=5?26:34}px;padding:${n>=7?3:n>=5?6:12}px 0">${(i===odd)!==sw?b:a}</button>`).join('')};
   $('gg').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;const r=b.getBoundingClientRect();
     if(b.dataset.o==='1'){ok++;combo++;maxC=Math.max(maxC,combo);sfx.good();vib(15);floatAt(r.left+r.width/2,r.top,'+1','#4ade80');flash(true)}
     else{bad++;combo=0;sfx.bad();vib(60);floatAt(r.left+r.width/2,r.top,'✗','#f87171');flash(false)}
@@ -136,10 +175,10 @@ async function ganjil(){
 
 // 7. Ingat Pola (urutan posisi)
 async function posisi(){
-  const L=gl('posisi'),n=L<=5?3:4;let len=2+Math.ceil(L/3),best=0,strikes=0;hideTimer();
+  const L=gl('posisi'),n=L<=5?3:L<=12?4:5;let len=2+Math.ceil(L/3),best=0,strikes=0;hideTimer();
   while(strikes<2&&!abort){
     const seq=Array.from({length:len},()=>rnd(n*n));window.__pseq=seq;
-    stage().innerHTML=`<p class="mut center" id="pm">Perhatikan urutannya · nyawa ${'❤️'.repeat(2-strikes)}${'🤍'.repeat(strikes)}</p><div class="g3" id="pg" style="grid-template-columns:repeat(${n},1fr);max-width:340px;margin:12px auto">${Array.from({length:n*n},(_,i)=>`<button class="key" data-i="${i}" style="height:${n===3?90:72}px;padding:0"></button>`).join('')}</div>`;
+    stage().innerHTML=`<p class="mut center" id="pm">Perhatikan urutannya · nyawa ${'❤️'.repeat(2-strikes)}${'🤍'.repeat(strikes)}</p><div class="g3" id="pg" style="grid-template-columns:repeat(${n},1fr);max-width:340px;margin:12px auto">${Array.from({length:n*n},(_,i)=>`<button class="key" data-i="${i}" style="height:${n===3?90:n===4?72:58}px;padding:0"></button>`).join('')}</div>`;
     const cells=[...$('pg').children];await sleep(TEST?80:700);
     for(const i of seq){if(abort)return{score:best};cells[i].style.background='var(--acc)';tone(300+i*40,.2);await sleep(TEST?80:450);cells[i].style.background='';await sleep(TEST?40:200)}
     $('pm').textContent='Giliranmu! Tap sesuai urutan';
@@ -156,11 +195,11 @@ async function posisi(){
 
 // 8. Ingat Kartu
 async function kartu(){
-  const L=gl('kartu'),np=Math.min(8,3+Math.floor(L/2));
+  const L=gl('kartu'),np=Math.min(12,3+Math.floor(L/2)),fs=np>8?28:34,pd=np>8?11:18;
   const EM=['🍎','🚗','🐶','⭐','🎈','🌵','🍕','🎧','🐱','🌈','⚽','🍩'];
   const pk=pick(EM,np),deck=pick([...pk,...pk],np*2);window.__deck=deck;
   hideTimer();let open=[],lock=false,matched=0,bad=0;const t0=Date.now();
-  stage().innerHTML=`<p class="mut center">Cari ${np} pasangan · salah <span id="bd">0</span></p><div class="g3" id="kg" style="grid-template-columns:repeat(4,1fr)">${deck.map((e,i)=>`<button class="key" data-i="${i}" style="font-size:34px;padding:18px 0">❔</button>`).join('')}</div>`;
+  stage().innerHTML=`<p class="mut center">Cari ${np} pasangan · salah <span id="bd">0</span></p><div class="g3" id="kg" style="grid-template-columns:repeat(4,1fr)">${deck.map((e,i)=>`<button class="key" data-i="${i}" style="font-size:${fs}px;padding:${pd}px 0">❔</button>`).join('')}</div>`;
   await new Promise(res=>{$('kg').onclick=async ev=>{const b=ev.target.closest('button');if(!b||lock||abort)return;const i=+b.dataset.i;if(open.includes(i)||b.dataset.m)return;
     b.textContent=deck[i];b.style.background='var(--card2)';sfx.tick();open.push(i);
     if(open.length===2){lock=true;const [x,y]=open,bx=$('kg').children[x],by=$('kg').children[y];
@@ -171,9 +210,9 @@ async function kartu(){
 }
 
 // 9. Susun Huruf
-const WORDLIST=['buku','roti','kopi','meja','sapu','kaca','baju','topi','gigi','kuda','rumah','kursi','pintu','bunga','mobil','tikus','jalan','kebun','sepatu','kompor','bantal','pensil','dompet','ladang','sekolah','jendela','pelajar','bendera','tetangga','keluarga','pekerjaan','kesehatan','perjalanan'];
+const WORDLIST=['pembicaraan','pemandangan','kepercayaan','pengetahuan','kemerdekaan','pembangunan','kebahagiaan','penghargaan','perpustakaan','pertandingan','perekonomian','pendidikan','masyarakat','pengalaman','kesempatan','kebersihan','keindahan','pelayanan','buku','roti','kopi','meja','sapu','kaca','baju','topi','gigi','kuda','rumah','kursi','pintu','bunga','mobil','tikus','jalan','kebun','sepatu','kompor','bantal','pensil','dompet','ladang','sekolah','jendela','pelajar','bendera','tetangga','keluarga','pekerjaan','kesehatan','perjalanan'];
 async function susun(){
-  const L=gl('susun'),target=[4,4,5,5,6,6,7,7,8,9][L-1];let ok=0,bad=0,word,tiles,ans;
+  const L=gl('susun'),target=[4,4,5,5,6,6,7,7,8,9,9,10,10,10,11,11,11,12,12,12][L-1];let ok=0,bad=0,word,tiles,ans;
   let pool=WORDLIST.filter(w=>w.length===target);if(!pool.length)pool=WORDLIST.filter(w=>w.length<=target);
   stage().innerHTML=`<p class="mut center">Susun huruf jadi kata · <span id="sc">0</span> benar</p><div class="disp" id="ans"></div><div id="tiles" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:12px 0"></div><button class="ghost small" id="bk" style="margin:0 auto;display:block">⌫ Hapus</button>`;
   const draw=()=>{$('ans').innerHTML=word.split('').map((_,i)=>`<span class="${i===ans.length?'f':''}">${ans[i]!=null?tiles[ans[i]]:''}</span>`).join('');
