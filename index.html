@@ -676,7 +676,7 @@ const TALK=[
   how:['Pertanyaan muncul. Jawab <b>keras</b> dengan 1-2 kalimat.','Jangan siapkan jawaban sempurna, pelan saja.','2-4 pertanyaan, makin banyak di tahap sulit.'],
   run:async(s)=>{const q=pick(QS,[2,3,4][s]);for(let i=0;i<q.length;i++){if(abort)return;
     await new Promise(res=>{stage().innerHTML=`<div class="center"><p class="mut">Pertanyaan ${i+1}/${q.length}</p><h2 style="font-size:26px;margin:24px 0">${q[i]}</h2><p class="mut">Tarik napas → mulai lembut → jawab pelan.</p><button class="pri" id="ans">Sudah kujawab ✓</button></div>`;$('ans').onclick=()=>{sfx.good();vib(15);res()}})}}},
- {i:7,ic:'🌍',name:'Dunia Nyata',eq:'Tahap transfer ke kehidupan sehari-hari',eta:'berkelanjutan (inti hasilnya di sini)',
+ {i:7,ic:'🌍',name:'Dunia Nyata',eq:'Tahap transfer ke kehidupan sehari-hari',eta:'terus-menerus',
   how:['Pilih 1 misi kecil di dunia nyata hari ini.','Siapkan, lalu lakukan sungguhan.','Lapor di sini, berhasil atau belum, sama-sama dihitung.'],
   run:async(s)=>{const m=MISSIONS[pick(MTIER[s],1)[0]];
     await new Promise(res=>{stage().innerHTML=`<div class="center"><div class="bigic">${m[0]}</div><h2 style="font-size:22px">Misi hari ini:<br>${m[1]}</h2><div class="how"><ol>${m[2].map(x=>`<li>${x}</li>`).join('')}</ol></div><div class="g2"><button class="ghost" id="no">Belum, nanti</button><button class="pri" id="yes">Sudah ✅</button></div></div>`;
