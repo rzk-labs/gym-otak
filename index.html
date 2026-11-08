@@ -99,6 +99,21 @@
   .switch{width:52px;height:30px;border-radius:99px;background:#37335f;position:relative;flex:none;padding:0}
   .switch::after{content:'';position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .2s}
   .switch.on{background:var(--ok)}.switch.on::after{left:25px}
+  /* bicara */
+  .kw{display:inline-block;margin:2px 4px;opacity:.3;transition:all .15s}
+  .kw.on{opacity:1;color:var(--acc);transform:scale(1.12)}.kw.past{opacity:.75}
+  .kline{font-size:34px;font-weight:800;text-align:center;line-height:1.5;margin:14px 0;min-height:110px}
+  .onset{height:12px;border-radius:99px;background:#37335f;overflow:hidden;margin:6px 0 12px}
+  .onset>div{height:100%;width:0;background:linear-gradient(90deg,#4b4680,var(--acc2))}
+  .lad{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #37335f}
+  .lad:last-child{border:0}.lad.cur{background:#2d295888;border-radius:14px;padding:10px}
+  .lad .n{width:38px;height:38px;border-radius:12px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}
+  .lad.done .n{background:#14532d}.lad.fut{opacity:.55}
+  .hbar{display:flex;gap:4px;align-items:flex-end;height:70px;margin-top:8px}
+  .hbar i{flex:1;border-radius:4px 4px 0 0;background:var(--acc);display:block;min-width:6px}
+  .rate{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.rate button{font-size:15px;padding:18px 6px}
+  .tip{background:var(--card2);border-radius:14px;padding:12px;margin-top:10px;font-size:15px;line-height:1.6}
+  a{color:var(--acc)}
 </style>
 </head>
 <body>
@@ -125,9 +140,12 @@
       </div>
       <button class="pri" id="btnAll" style="margin-top:14px">▶ Mulai latihan harian</button>
     </div>
+    <div class="card ex" id="talkCard"></div>
     <div class="mut" style="margin:4px 4px 8px">Atau pilih satu latihan:</div>
     <div id="exList"></div>
   </section>
+
+  <section id="tab-talk" class="hide"></section>
 
   <section id="tab-prog" class="hide">
     <div class="card"><h2>🏆 Rekor terbaik</h2><div id="best"></div></div>
@@ -158,6 +176,7 @@
 
 <nav>
   <button data-tab="home" class="on">🏋️<br>Latihan</button>
+  <button data-tab="talk">🗣️<br>Bicara</button>
   <button data-tab="prog">📈<br>Progres</button>
   <button data-tab="set">⚙️<br>Atur</button>
 </nav>
@@ -185,7 +204,7 @@
 const TEST=new URLSearchParams(location.search).has('test'); // durasi singkat untuk uji otomatis
 const KEY='gymotak.v1';
 let db;try{db=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){db={}}
-db.days=db.days||{};db.lvl=db.lvl||{};db.best=db.best||{};db.xp=db.xp||0;
+db.talk=db.talk||{lvl:1,sess:[],hist:[]};db.days=db.days||{};db.lvl=db.lvl||{};db.best=db.best||{};db.xp=db.xp||0;
 if(db.sound==null)db.sound=true;if(db.vib==null)db.vib=true;
 const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
 const dayKey=(d=new Date())=>d.toLocaleDateString('sv-SE');
@@ -264,6 +283,7 @@ function streak(){
 }
 function greeting(){const h=new Date().getHours();return h<11?'Selamat pagi':h<15?'Selamat siang':h<18?'Selamat sore':'Selamat malam'}
 function renderHome(){
+  renderTalkCard();
   const t=today(),n=Object.keys(t).length,st=streak();
   $('streakPill').textContent=`🔥 ${st} hari`;
   $('ringTxt').textContent=`${n}/5`;$('ringFg').style.strokeDashoffset=251.3*(1-n/5);
@@ -289,14 +309,14 @@ function renderProg(){
 function renderSet(){$('setName').textContent=db.name||'Atur';$('swSound').classList.toggle('on',db.sound);$('swVib').classList.toggle('on',db.vib)}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
-  ['home','prog','set'].forEach(t=>$('tab-'+t).classList.toggle('hide',b.dataset.tab!==t));
-  ({home:renderHome,prog:renderProg,set:renderSet})[b.dataset.tab]();
+  ['home','talk','prog','set'].forEach(t=>$('tab-'+t).classList.toggle('hide',b.dataset.tab!==t));
+  ({home:renderHome,talk:renderTalk,prog:renderProg,set:renderSet})[b.dataset.tab]();
 });
 $('swSound').onclick=()=>{db.sound=!db.sound;save();renderSet();sfx.good()};
 $('swVib').onclick=()=>{db.vib=!db.vib;save();renderSet();vib(60)};
 $('setName').onclick=()=>{const n=prompt('Nama panggilan:',db.name||'');if(n!=null){db.name=n.trim().slice(0,20);save();renderSet();renderHome()}};
 $('reOnb').onclick=()=>onboarding();
-$('btnReset').onclick=async()=>{if(await confirmBox('Hapus semua progres, XP, dan rekor?','Hapus')){const k={name:db.name,sound:db.sound,vib:db.vib,onb:true};db={days:{},lvl:{},best:{},xp:0,...k};save();renderSet();toast('Data dihapus')}};
+$('btnReset').onclick=async()=>{if(await confirmBox('Hapus semua progres, XP, dan rekor?','Hapus')){const k={name:db.name,sound:db.sound,vib:db.vib,onb:true};db={days:{},lvl:{},best:{},xp:0,talk:{lvl:1,sess:[],hist:[]},...k};save();renderSet();toast('Data dihapus')}};
 
 // ---------- Onboarding ----------
 function onboarding(){
@@ -319,7 +339,7 @@ function onboarding(){
 // ---------- Mesin latihan ----------
 let abort=false,timerRAF=null,queue=[],qi=0;
 $('pQuit').onclick=async()=>{if(await confirmBox('Keluar dari latihan? Latihan yang sedang jalan tidak disimpan.','Keluar','Lanjut latihan')){abort=true;closePlay()}};
-function closePlay(){$('play').classList.add('hide');cancelAnimationFrame(timerRAF);renderHome()}
+function closePlay(){$('play').classList.add('hide');cancelAnimationFrame(timerRAF);try{speechSynthesis.cancel()}catch(e){}renderHome();renderTalk()}
 const stage=()=>$('stage');
 const hideTimer=()=>$('pTimerWrap').classList.add('hide');
 function runTimer(sec){
@@ -500,6 +520,182 @@ async function bosan(){
   return {score:held,target,note:failed?'Tersentuh atau keluar app. Tidak apa-apa, coba lagi 🙂':`Berhasil! Target berikutnya ${Math.min(300,target+15)} detik`};
 }
 const GAMES={stroop,digit,gonogo,baca,bosan};
+
+// ================= 🗣️ LATIHAN BICARA (gagap) =================
+const pick=(a,n)=>[...a].sort(()=>Math.random()-.5).slice(0,n);
+const WORDS=['api','ibu','ayam','orang','udara','indah','enak','ada','aku','elok','pagi','tolong','makan','bapak','kamu','teman','minum','duduk','kopi','pintu','baik','dari','gula','tahu'];
+const nm=()=>db.name||'aku';
+const PHRASES=()=>['selamat pagi','apa kabar','terima kasih','tolong bantu aku','berapa harganya','saya mau beli','boleh tanya sebentar','nama saya '+nm(),'sampai jumpa lagi','permisi ya','aku baik-baik saja','mari kita mulai'];
+const SENTS=['Hari ini / aku mau belajar / bicara pelan.','Aku tidak perlu buru-buru / semua ada waktunya.','Kalau tersendat / aku tarik napas / lalu lanjut.','Saya ingin membeli / dua botol air / dan satu roti.','Pagi ini / udara terasa segar / dan hatiku tenang.','Tolong ulangi pelan-pelan / supaya saya bisa mengerti.'];
+const TOPICS=['Ceritakan sarapan atau makanan favoritmu','Ceritakan hari ini dari bangun tidur sampai sekarang','Ceritakan tempat yang ingin kamu kunjungi','Ceritakan hobi atau hal yang kamu suka','Ceritakan orang yang kamu sayangi','Ceritakan perjalananmu ke tempat kerja/kampus'];
+const QS=['Siapa namamu dan tinggal di mana?','Apa yang kamu lakukan di akhir pekan?','Makanan apa yang kamu suka? Kenapa?','Kamu sedang belajar apa sekarang?','Ceritakan satu hal lucu yang pernah terjadi.','Apa rencanamu besok?'];
+const MISSIONS=[
+ ['🛒','Tanya harga di warung/toko',['Siapkan 1 kalimat: "Permisi, ini berapa ya?"','Tarik napas, mulai kata pertama dengan lembut','Tersendat? Berhenti, napas, lanjut pelan']],
+ ['🍜','Pesan makanan/minuman sendiri',['Siapkan pesanan di kepala','Ucapkan pelan, jeda di antara item','Tersenyum, itu sudah cukup bagus']],
+ ['👋','Kenalan / sapa 1 orang',['Siapkan: "Halo, aku '+'…'+'. Kamu?"','Mulai lembut, jangan buru-buru','Satu sapaan saja sudah menang']],
+ ['☎️','Kirim pesan suara / telepon singkat ke teman',['Tulis 2 poin yang mau dibilang','Napas dulu sebelum menekan tombol','Pelan, jeda di tiap poin']],
+ ['🙋','Bertanya 1 hal di kantor/kelas',['Tulis pertanyaannya','Latih sekali dalam hati','Ucapkan pelan dengan awal lembut']],
+ ['📢','Ceritakan harimu ke seseorang selama 1 menit',['Pilih 3 hal yang mau diceritakan','Jeda napas di antara tiap hal','Biarkan dia menunggu, tidak apa-apa']]
+];
+function speak(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t.replace(/\//g,','));u.lang='id-ID';u.rate=.75;speechSynthesis.speak(u)}catch(e){}}
+const hasTTS=()=>'speechSynthesis' in window;
+const MS=(n)=>TEST?60:n;
+
+// karaoke: kata menyala satu-satu supaya kecepatan bicara terpandu
+let KID=0;
+async function karaoke(text,msWord,msPause,onset){const id=++KID;
+  const toks=text.split(' ').filter(Boolean);
+  const html=toks.map(t=>t==='/'?'<br class="pz">':`<span class="kw">${t}</span>`).join(' ');
+  $('kl').innerHTML=html.replace(/<br class="pz">/g,'<span style="opacity:.35"> • </span>');
+  const ws=[...$('kl').querySelectorAll('.kw')];let wi=0;
+  if(onset){const b=$('onb2');b.style.transition='none';b.style.width='0';void b.offsetWidth;b.style.transition=`width ${MS(msWord)}ms ease-in`;b.style.width='100%'}
+  for(const t of toks){
+    if(abort||id!==KID)return;
+    if(t==='/'){await sleep(MS(msPause));continue}
+    ws[wi].classList.add('on');await sleep(MS(msWord));ws[wi].classList.remove('on');ws[wi].classList.add('past');wi++;
+  }
+}
+// satu rangkaian item karaoke: otomatis jalan, boleh ulang
+async function drillItems(items,{label,msWord,msPause,onset,hint}){
+  for(let i=0;i<items.length;i++){
+    if(abort)return;
+    let again=true;
+    while(again&&!abort){
+      again=false;
+      stage().innerHTML=`<p class="mut center">${label} ${i+1}/${items.length}</p>${onset?'<div class="onset"><div id="onb2"></div></div>':''}<div class="kline" id="kl"></div><p class="mut center">${hint}</p>
+        <div class="g2" style="margin-top:10px"><button class="ghost" id="rep">↻ Ulangi</button><button class="pri" id="nx" disabled style="opacity:.5">Lanjut →</button></div>
+        ${hasTTS()?'<button class="ghost small" id="hear" style="margin:10px auto 0;display:block">🔊 Dengar contoh</button>':''}`;
+      $('kl').textContent=items[i].replace(/ \/ /g,' • ');
+      await sleep(MS(600));
+      const clean=items[i];
+      const myId=KID+1;const done=karaoke(clean.replace(/ \/ /g,' / '),msWord,msPause,onset).then(()=>{if(abort||KID!==myId)return;const n=$('nx');if(n){n.disabled=false;n.style.opacity=1}});
+      const h=$('hear');if(h)h.onclick=()=>speak(clean);
+      const act=await new Promise(res=>{$('rep').onclick=()=>res('rep');$('nx').onclick=()=>res('nx')});
+      if(act==='rep'){again=true;sfx.tick()}else{sfx.good();vib(15)}
+    }
+  }
+}
+function talkIntro(L){
+  return new Promise(res=>{hideTimer();
+    stage().innerHTML=`<div class="center"><div class="bigic">${L.ic}</div><h2 style="font-size:24px">Level ${L.i}: ${L.name}</h2>
+      <div class="how"><b>Cara latihan</b><ol>${L.how.map(h=>`<li>${h}</li>`).join('')}</ol></div>
+      <p class="mut">Bicara <b>keras-keras</b>, bukan dalam hati. Tersendat itu normal 🙂</p>
+      <button class="pri" id="go">Siap! ▶</button></div>`;
+    $('go').onclick=res});
+}
+async function breathe(){
+  hideTimer();let skip=false;
+  stage().innerHTML=`<div class="center"><h2>🌬️ Pemanasan napas</h2><p class="mut">Tarik napas perut, buang pelan. Bahu rileks.</p><div class="calm" id="calm" style="animation-duration:10s">tarik napas…</div><div class="big" id="bc">0/${TEST?1:3}</div><button class="ghost small" id="skp" style="margin-top:8px">Lewati</button></div>`;
+  $('skp').onclick=()=>skip=true;
+  const cycles=TEST?1:3;
+  for(let c=0;c<cycles&&!skip&&!abort;c++){
+    $('calm').textContent='tarik napas… 4';await sleep(MS(4000));if(skip||abort)break;
+    $('calm').textContent='buang pelan… 6';await sleep(MS(6000));
+    $('bc').textContent=`${c+1}/${cycles}`;
+  }
+}
+const TALK=[
+ {i:1,ic:'🌱',name:'Kata Lembut',eq:'Tahap kata tunggal (awal terapi)',eta:'±1 minggu',
+  how:['Satu kata muncul, bar di atas naik pelan.','Mulai ucapkan kata itu <b>lembut</b>, suara naik pelan seperti bar.','Ulangi kalau mau. 8 kata saja.'],
+  run:async()=>drillItems(pick(WORDS,8),{label:'Kata',msWord:1600,msPause:0,onset:true,hint:'Mulai suara lembut, jangan menghentak'})},
+ {i:2,ic:'🐢',name:'Frasa Pelan',eq:'Tahap frasa 2-4 kata',eta:'1-2 minggu',
+  how:['Frasa pendek muncul, kata menyala satu-satu.','Ucapkan <b>mengikuti nyala</b>, sambung antar kata.','6 frasa.'],
+  run:async()=>drillItems(pick(PHRASES(),6),{label:'Frasa',msWord:900,msPause:0,hint:'Ikuti nyalanya, pelan dan tersambung'})},
+ {i:3,ic:'⏸️',name:'Kalimat & Jeda',eq:'Tahap kalimat dengan jeda napas',eta:'±2 minggu',
+  how:['Kalimat muncul, tanda • = <b>jeda napas</b>.','Ucapkan mengikuti nyala, berhenti di setiap •.','4 kalimat.'],
+  run:async()=>drillItems(pick(SENTS,4),{label:'Kalimat',msWord:750,msPause:900,hint:'Jeda di • itu bagian dari latihan'})},
+ {i:4,ic:'🎶',name:'Baca Bareng',eq:'Tahap membaca keras (choral/gema)',eta:'±2 minggu',
+  how:['Kalimat dari teks bacaan muncul.','Tap 🔊 untuk dengar dulu, lalu <b>baca bersama</b> nyalanya.','4 kalimat.'],
+  run:async()=>{const t=TEXTS[rnd(TEXTS.length)].t.split(/(?<=\.)\s+/).slice(0,4).map(x=>x.replace(/,\s/g,' / ').replace(/\.$/,''));
+    return drillItems(t,{label:'Kalimat',msWord:600,msPause:500,hint:'Baca keras bersama nyalanya'})}},
+ {i:5,ic:'💬',name:'Cerita Sendiri',eq:'Tahap monolog tanpa teks',eta:'2-3 minggu',
+  how:['Topik muncul. Kamu bercerita <b>sendiri 1 menit</b>.','Pelan, jeda napas di antara kalimat.','Tap Selesai kalau sudah.'],
+  run:()=>new Promise(async res=>{
+    const topic=TOPICS[rnd(TOPICS.length)];const cues=['Mulai kalimat pertama dengan lembut','Jeda sebentar, tarik napas','Pelan saja, tidak ada yang menunggu','Satu kalimat pendek sudah cukup','Tersendat? Berhenti, napas, lanjut'];
+    stage().innerHTML=`<div class="center"><h2 style="font-size:22px">${topic}</h2><div class="calm" id="calm" style="animation-duration:8s">🎙️</div><div class="big" id="ts">0</div><p class="mut" id="cue">${cues[0]}</p><button class="pri" id="fin2">Selesai ✓</button></div>`;
+    let stop=false;$('fin2').onclick=()=>{stop=true};const t0=Date.now();let ci=0;
+    runTimer(T(60));
+    while(!stop&&!abort&&Date.now()-t0<T(60)*1000){$('ts').textContent=Math.floor((Date.now()-t0)/1000)+' dtk';const c=Math.floor((Date.now()-t0)/(TEST?300:9000))%cues.length;if(c!==ci){ci=c;$('cue').textContent=cues[c]}await sleep(250)}
+    res()})},
+ {i:6,ic:'🎤',name:'Tanya Jawab',eq:'Tahap percakapan terstruktur',eta:'2-3 minggu',
+  how:['Pertanyaan muncul. Jawab <b>keras</b> dengan 1-2 kalimat.','Jangan siapkan jawaban sempurna, pelan saja.','3 pertanyaan.'],
+  run:async()=>{const q=pick(QS,3);for(let i=0;i<q.length;i++){if(abort)return;
+    await new Promise(res=>{stage().innerHTML=`<div class="center"><p class="mut">Pertanyaan ${i+1}/3</p><h2 style="font-size:26px;margin:24px 0">${q[i]}</h2><p class="mut">Tarik napas → mulai lembut → jawab pelan.</p><button class="pri" id="ans">Sudah kujawab ✓</button></div>`;$('ans').onclick=()=>{sfx.good();vib(15);res()}})}}},
+ {i:7,ic:'🌍',name:'Dunia Nyata',eq:'Tahap transfer ke kehidupan sehari-hari',eta:'berkelanjutan (inti hasilnya di sini)',
+  how:['Pilih 1 misi kecil di dunia nyata hari ini.','Siapkan, lalu lakukan sungguhan.','Lapor di sini, berhasil atau belum, sama-sama dihitung.'],
+  run:async()=>{const m=MISSIONS[rnd(MISSIONS.length)];
+    await new Promise(res=>{stage().innerHTML=`<div class="center"><div class="bigic">${m[0]}</div><h2 style="font-size:22px">Misi hari ini:<br>${m[1]}</h2><div class="how"><ol>${m[2].map(x=>`<li>${x}</li>`).join('')}</ol></div><div class="g2"><button class="ghost" id="no">Belum, nanti</button><button class="pri" id="yes">Sudah ✅</button></div></div>`;
+      $('no').onclick=res;$('yes').onclick=()=>{db.talk.missions=(db.talk.missions||0)+1;save();sfx.win();confetti();res()}})}}
+];
+const RATES=[['😣','Susah'],['🙂','Lumayan'],['😊','Enak']];
+const tk=()=>db.talk;
+function talkStreak(){const days=new Set(tk().hist.map(h=>h.k));let s=0;const d=new Date();if(!days.has(dayKey(d)))d.setDate(d.getDate()-1);while(days.has(dayKey(d))){s++;d.setDate(d.getDate()-1)}return s}
+function renderTalkCard(){
+  const L=TALK[tk().lvl-1],doneToday=tk().hist.some(h=>h.k===dayKey());
+  $('talkCard').innerHTML=`<div class="ic">🗣️</div><div class="tt"><b>Latihan Bicara</b><div class="mut">Level ${L.i} · ${L.name}</div></div><div class="sc">${doneToday?'✅':'<span style="font-size:22px;color:var(--acc)">▶</span>'}</div>`;
+  $('talkCard').onclick=()=>talkSession();
+}
+function renderTalk(){
+  const t=tk(),L=TALK[t.lvl-1],hist=t.hist,days=new Set(hist.map(h=>h.k)),mins=Math.round(hist.reduce((a,h)=>a+h.s,0)/60);
+  const last14=hist.slice(-14);
+  const wk=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return days.has(dayKey(d))}),wkn=wk.filter(Boolean).length;
+  const need=3,have=Math.min(need,t.sess.length);
+  $('tab-talk').innerHTML=`
+  <div class="card">
+    <h2>🗣️ Latihan Bicara</h2>
+    <div style="display:flex;gap:12px;align-items:center"><div class="bigic" style="font-size:48px">${L.ic}</div><div><b style="font-size:18px">Level ${L.i}: ${L.name}</b><div class="mut">${L.eq}</div></div></div>
+    <div class="mut" style="margin-top:10px">Naik level: ${have}/${need} sesi terasa 🙂 atau 😊</div>
+    <div class="bar"><div style="width:${have/need*100}%"></div></div>
+    <button class="pri" id="btnTalk">▶ Mulai sesi bicara (±5 menit)</button>
+  </div>
+  <div class="card">
+    <h2>📊 Progresmu</h2>
+    <div class="row"><span>🔥 Hari beruntun</span><b>${talkStreak()}</b></div>
+    <div class="row"><span>📅 Minggu ini</span><b>${wk.map(x=>x?'●':'○').join(' ')} ${wkn}/7</b></div>
+    <div class="row"><span>🎯 Total sesi</span><b>${hist.length}</b></div>
+    <div class="row"><span>⏱️ Total menit</span><b>${mins}</b></div>
+    <div class="row"><span>🌍 Misi dunia nyata</span><b>${t.missions||0}</b></div>
+    <div class="mut" style="margin-top:8px">Rasa nyaman 14 sesi terakhir (makin tinggi makin enak):</div>
+    <div class="hbar">${last14.length?last14.map(h=>`<i style="height:${h.r*33}%;opacity:${h.r===1?.5:1}" title="${RATES[h.r-1][1]}"></i>`).join(''):'<span class="mut">Belum ada sesi. Mulai yuk 🙂</span>'}</div>
+  </div>
+  <div class="card">
+    <h2>🪜 Tangga 7 level</h2>
+    ${TALK.map(x=>`<div class="lad ${x.i<t.lvl?'done':x.i===t.lvl?'cur':'fut'}"><div class="n">${x.i<t.lvl?'✅':x.ic}</div><div style="flex:1"><b>${x.i}. ${x.name}</b><div class="mut">${x.eq}</div></div><div class="mut" style="text-align:right;font-size:12px">${x.eta}</div></div>`).join('')}
+    <div class="tip">⏳ <b>Estimasi:</b> kalau 5 menit per hari, tangga ini selesai ±3 bulan. Itu <b>estimasi app</b>, bukan janji. Tiap orang beda, dan boleh mengulang level.</div>
+  </div>
+  <div class="card">
+    <h2>🔬 Riset singkat</h2>
+    <ul class="mut" style="padding-left:18px;margin:0;line-height:1.7">
+      <li>Teknik <b>mulai lembut</b> dan <b>bicara pelan</b> (prolonged speech) terbukti membantu orang dewasa yang gagap (<a href="https://pubs.asha.org/doi/10.1044/1092-4388(2008/07-0040)" target="_blank" rel="noopener">ASHA</a>).</li>
+      <li>Urutan latihan umum: kata → frasa → kalimat → bicara bebas → <b>telepon/dunia nyata</b> (<a href="https://theadultspeechtherapyworkbook.com/easy-onset/" target="_blank" rel="noopener">panduan klinis</a>).</li>
+      <li>Program terapis <b>intensif 2-3 minggu</b>; studi dewasa memakai ±12 minggu. Efek diukur sampai 6-24 bulan, jadi <b>konsisten itu kuncinya</b> (<a href="https://en.wikipedia.org/wiki/Stuttering_therapy" target="_blank" rel="noopener">ringkasan</a>).</li>
+      <li>Gagap biasanya <b>dikelola</b>, bukan "hilang total". Targetnya: bicara lebih tenang & percaya diri.</li>
+    </ul>
+    <div class="tip">💡 <b>Kalau tersendat:</b> berhenti sebentar → tarik napas → lanjut pelan. Tidak perlu mengulang dari awal atau minta maaf.</div>
+    <div class="tip">🩺 App ini latihan mandiri, <b>bukan pengganti terapis wicara</b>. Hasil terbaik: kombinasikan dengan terapis (SLP).</div>
+  </div>`;
+  $('btnTalk').onclick=()=>talkSession();
+}
+async function talkSession(){
+  abort=false;queue=['a','b','c'];qi=0;$('play').classList.remove('hide');$('pTitle').textContent='Latihan Bicara';
+  const t0=Date.now(),lvl=tk().lvl,L=TALK[lvl-1];
+  drawDots();await breathe();if(abort)return;
+  qi=1;drawDots();await talkIntro(L);if(abort)return;
+  await L.run();if(abort)return;
+  qi=2;drawDots();hideTimer();
+  const r=await new Promise(res=>{stage().innerHTML=`<div class="center"><div class="bigic">🌟</div><h2>Seberapa enak bicaramu tadi?</h2><p class="mut">Jujur saja. Tersendat itu bukan nilai jelek.</p><div class="rate">${RATES.map((x,i)=>`<button data-r="${i+1}"><div style="font-size:34px">${x[0]}</div>${x[1]}</button>`).join('')}</div></div>`;
+    stage().onclick=ev=>{const b=ev.target.closest('button');if(!b)return;stage().onclick=null;res(+b.dataset.r)}});
+  if(abort)return;
+  const t=tk();t.hist.push({k:dayKey(),l:lvl,r,s:Math.round((Date.now()-t0)/1000)});t.hist=t.hist.slice(-300);
+  t.sess.push(r);let msg='Sesi tercatat. Konsisten itu yang bikin maju 💪',up=false;
+  const lastN=t.sess.slice(-3);
+  if(lastN.length>=3&&lastN.reduce((a,b)=>a+b,0)/3>=2&&lvl<7){t.lvl=lvl+1;t.sess=[];up=true;msg=`Naik ke Level ${t.lvl}: ${TALK[t.lvl-1].name}! 🎉`}
+  else if(lastN.length>=3&&lastN.reduce((a,b)=>a+b,0)/3<1.5)msg='Level ini masih berat, tidak apa-apa. Ulangi dulu, itu bagian dari proses 🙂';
+  const xp=15+r*5;const lvUp=addXP(xp);save();
+  stage().innerHTML=`<div class="center"><div class="bigic">${up?'🏆':'🎉'}</div><h2>Sesi bicara selesai!</h2><p>${msg}</p><p><span class="pill">+${xp} XP</span> <span class="pill">🔥 ${talkStreak()} hari</span></p><p class="mut">Minum air 💧 Suaramu sudah bekerja keras.</p><button class="pri" id="fin">Selesai</button></div>`;
+  sfx.win();confetti();vib([80,60,80]);if(lvUp)setTimeout(()=>{sfx.lvl();toast(`⬆️ Level otak ${level()}!`)},600);
+  $('fin').onclick=closePlay;
+}
 
 renderHome();
 if(!db.onb)onboarding();
