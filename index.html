@@ -796,7 +796,9 @@ async function talkSession(only){
   $('fin').onclick=closePlay;
 }
 
-window.boot=function(){renderHome();if(!db.onb)onboarding();if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js')};
+window.boot=function(){renderHome();if(!db.onb)onboarding();if('serviceWorker' in navigator){const had=!!navigator.serviceWorker.controller;let rl=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!rl&&!document.getElementById('stage')?.innerText?.trim()){rl=true;location.reload()}}); // versi baru -> muat ulang otomatis (tidak saat sedang main)
+  navigator.serviceWorker.register('sw.js').then(r=>{document.addEventListener('visibilitychange',()=>{if(!document.hidden)r.update()})}).catch(()=>{})}};
 </script>
 <script src="elevate.js"></script>
 </body>
