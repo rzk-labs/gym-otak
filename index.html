@@ -48,7 +48,7 @@
   .ex.done .ic{background:#14532d}
   .stars{color:var(--gold);letter-spacing:1px}
   nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#0e0c22ee;backdrop-filter:blur(8px);border-top:1px solid #37335f;padding-bottom:env(safe-area-inset-bottom);z-index:5}
-  nav button{border-radius:0;background:transparent;color:var(--mut);padding:12px 4px;font-size:13px}
+  nav button{border-radius:0;background:transparent;color:var(--mut);padding:10px 2px;font-size:12px}
   nav button.on{color:var(--acc);font-weight:800}
   /* layar penuh (latihan & onboarding) */
   .full{position:fixed;inset:0;background:var(--bg);z-index:10;display:flex;flex-direction:column;padding:calc(12px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom))}
@@ -146,9 +146,12 @@
       <button class="pri" id="btnAll" style="margin-top:14px">▶ Mulai latihan harian</button>
     </div>
     <div class="card ex" id="talkCard"></div>
-    <div class="mut" style="margin:4px 4px 8px">Atau pilih satu latihan:</div>
+    <div class="mut" style="margin:4px 4px 8px">🎯 Latihan hari ini (3 game pilihan):</div>
     <div id="exList"></div>
+    <div class="card" id="epqMini"></div>
   </section>
+
+  <section id="tab-games" class="hide"></section>
 
   <section id="tab-talk" class="hide"></section>
 
@@ -169,13 +172,7 @@
     </div>
     <div class="card">
       <h2>🤔 Kenapa latihan ini?</h2>
-      <ul class="mut" style="padding-left:18px;margin:0;line-height:1.7">
-        <li><b>Warna Kata</b>: melatih kontrol diri (mengabaikan godaan)</li>
-        <li><b>Ingat Angka</b>: melatih memori kerja</li>
-        <li><b>Tahan Jari</b>: melatih menahan impuls, misalnya refleks mau scroll</li>
-        <li><b>Baca Pelan</b>: melatih fokus membaca panjang</li>
-        <li><b>Tahan Bosan</b>: melatih otak nyaman tanpa stimulasi</li>
-      </ul>
+      <ul class="mut" style="padding-left:18px;margin:0;line-height:1.7"><li><b>🎯 Fokus</b>: Warna Kata, Tahan Jari, Cari Ganjil, Tahan Bosan</li><li><b>🧠 Memori</b>: Ingat Angka, Ingat Pola, Ingat Kartu</li><li><b>⚡ Kecepatan</b>: Mana Lebih Besar</li><li><b>➗ Hitung</b>: Hitung Kilat, Pola Angka</li><li><b>📖 Membaca</b>: Baca Pelan, Kata Sama Arti</li><li><b>✍️ Menulis</b>: Ejaan Benar, Susun Huruf</li><li><b>🗣️ Bicara</b>: latihan gagap (tab Bicara)</li></ul>
     </div>
     <button class="ghost" id="btnReset">🗑️ Hapus semua data</button>
   </section>
@@ -183,6 +180,7 @@
 
 <nav>
   <button data-tab="home" class="on">🏋️<br>Latihan</button>
+  <button data-tab="games">🎮<br>Game</button>
   <button data-tab="talk">🗣️<br>Bicara</button>
   <button data-tab="prog">📈<br>Progres</button>
   <button data-tab="set">⚙️<br>Atur</button>
@@ -316,8 +314,8 @@ function renderProg(){
 function renderSet(){$('setName').textContent=db.name||'Atur';$('swSound').classList.toggle('on',db.sound);$('swVib').classList.toggle('on',db.vib)}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
-  ['home','talk','prog','set'].forEach(t=>$('tab-'+t).classList.toggle('hide',b.dataset.tab!==t));
-  ({home:renderHome,talk:renderTalk,prog:renderProg,set:renderSet})[b.dataset.tab]();
+  ['home','games','talk','prog','set'].forEach(t=>$('tab-'+t).classList.toggle('hide',b.dataset.tab!==t));
+  ({home:renderHome,games:renderGames,talk:renderTalk,prog:renderProg,set:renderSet})[b.dataset.tab]();
 });
 $('swSound').onclick=()=>{db.sound=!db.sound;save();renderSet();sfx.good()};
 $('swVib').onclick=()=>{db.vib=!db.vib;save();renderSet();vib(60)};
@@ -343,9 +341,9 @@ $('btnReset').onclick=async()=>{if(await confirmBox('Hapus semua progres, XP, da
 function onboarding(){
   const S=[
     {h:`<div class="bigic center">🧠</div><h2 class="center" style="font-size:24px">Otak itu kayak otot</h2><p class="mut center" style="font-size:16px">Video pendek bikin otak terbiasa dengan hiburan cepat. Fokus jadi gampang buyar.<br><br>Kabar baiknya: <b style="color:var(--tx)">bisa dilatih lagi.</b></p>`},
-    {h:`<div class="bigic center">🏋️</div><h2 class="center" style="font-size:24px">5 latihan · 10 menit</h2>
-      <div class="how">${EX.map(e=>`<div style="padding:6px 0">${e.ic} <b>${e.name}</b> <span class="mut">— ${e.desc}</span></div>`).join('')}</div>
-      <p class="mut center">Selesaikan ≥3 per hari untuk jaga 🔥 streak.<br>Dapat ⭐ bintang & XP buat naik level.</p>`},
+    {h:`<div class="bigic center">🏋️</div><h2 class="center" style="font-size:24px">3 game sehari · ±10 menit</h2>
+      <div class="how">🎯 Fokus · 🧠 Memori · ⚡ Kecepatan<br>➗ Hitung · 📖 Membaca · ✍️ Menulis · 🗣️ Bicara<br><span class="mut">Tiap game punya level 1-10 yang makin sulit, dan ada skor kemampuan (EPQ).</span></div>
+      <p class="mut center">Selesaikan 3 game per hari untuk jaga 🔥 streak.<br>Dapat ⭐ bintang & XP buat naik level.</p>`},
     {h:`<div class="bigic center">👋</div><h2 class="center" style="font-size:24px">Kenalan dulu</h2><p class="mut center">Mau dipanggil apa?</p><input type="text" id="onbName" placeholder="Nama panggilan" maxlength="20" value="${db.name||''}">
       <p class="mut center" style="margin-top:16px">💡 Tips: install lewat Safari → <b>Bagikan</b> → <b>Tambah ke Layar Utama</b></p>`}
   ];
@@ -372,7 +370,7 @@ function intro(e){
   return new Promise(res=>{hideTimer();
     stage().innerHTML=`<div class="center"><div class="bigic">${e.ic}</div><h2 style="font-size:24px">${e.name}</h2>
       <div class="how"><b>Cara main</b><ol>${e.how.map(h=>`<li>${h}</li>`).join('')}</ol><div class="demo">${e.demo}</div></div>
-      ${db.best[e.id]!=null?`<p class="mut">Rekor kamu: <b>${db.best[e.id]} ${e.unit}</b></p>`:''}
+      <p class="mut">Level game: <b>${gl(e.id)}</b>/10</p>${db.best[e.id]!=null?`<p class="mut">Rekor kamu: <b>${db.best[e.id]} ${e.unit}</b></p>`:''}
       <button class="pri" id="go">Siap! ▶</button></div>`;
     $('go').onclick=res;
   });
@@ -389,7 +387,7 @@ function result(e,r,xp,rec,lvUp){
       <div class="big"><span id="cu">0</span> <span style="font-size:24px">${e.unit}</span></div>
       <div class="stars" style="font-size:40px">${starStr(r.stars)}</div>
       <p class="mut">${r.note||''}</p>
-      <p><span class="pill">+${xp} XP</span> ${rec?'<span class="pill" style="color:var(--gold)">Rekor baru!</span>':''}</p>
+      <p><span class="pill">+${xp} XP</span> ${rec?'<span class="pill" style="color:var(--gold)">Rekor baru!</span>':''} ${r.gUp?`<span class="pill" style="color:var(--ok)">${r.gUp}</span>`:''}</p>
       <button class="pri" id="next">${qi<queue.length-1?'Latihan berikutnya →':'Lihat hasil 🎉'}</button></div>`;
     countUp($('cu'),r.score);
     if(r.stars>=2||rec)sfx.win();
@@ -405,7 +403,7 @@ async function runQueue(ids){
     await intro(e);if(abort)return;
     await countdown();if(abort)return;
     const r=await GAMES[e.id]();if(abort)return;
-    r.stars=starsFor(e,r.score,r.target);
+    r.stars=starsFor(e,r.score,r.target);afterGame(e,r);
     const k=dayKey();db.days[k]=db.days[k]||{};db.stars=db.stars||{};db.stars[k]=db.stars[k]||{};
     db.days[k][e.id]=Math.max(db.days[k][e.id]??-Infinity,r.score);
     db.stars[k][e.id]=Math.max(db.stars[k][e.id]??0,r.stars);
@@ -427,11 +425,11 @@ async function runQueue(ids){
 }
 
 // ---------- 1. Warna Kata (Stroop) ----------
-const COLORS=[['MERAH','#ef4444'],['BIRU','#3b82f6'],['HIJAU','#22c55e'],['KUNING','#facc15']];
+const COLORS=[['MERAH','#ef4444'],['BIRU','#3b82f6'],['HIJAU','#22c55e'],['KUNING','#facc15'],['ORANYE','#f97316'],['UNGU','#a855f7']];
 async function stroop(){
-  let ok=0,bad=0,cur,combo=0,maxC=0;
-  stage().innerHTML=`<div class="combo" id="cb"></div><div class="word" id="w"></div><div class="g2" id="opts">${COLORS.map((c,i)=>`<button class="key" data-i="${i}">${c[0]}</button>`).join('')}</div><p class="mut center">Tap <b>warna tinta</b>-nya · <span id="sc">0</span> benar</p>`;
-  const next=()=>{let w=rnd(4),c=rnd(4);if(Math.random()<.75)while(c===w)c=rnd(4);cur=c;const el=$('w');el.textContent=COLORS[w][0];el.style.color=COLORS[c][1];el.dataset.ink=c;el.style.animation='none';void el.offsetWidth;el.style.animation='pop .2s'};
+  let ok=0,bad=0,cur,combo=0,maxC=0;const N=gl('stroop')>=4?6:4;
+  stage().innerHTML=`<div class="combo" id="cb"></div><div class="word" id="w"></div><div class="g2" id="opts">${COLORS.slice(0,N).map((c,i)=>`<button class="key" data-i="${i}">${c[0]}</button>`).join('')}</div><p class="mut center">Tap <b>warna tinta</b>-nya · <span id="sc">0</span> benar</p>`;
+  const next=()=>{let w=rnd(N),c=rnd(N);if(Math.random()<.7+Math.min(.2,gl('stroop')*.02))while(c===w)c=rnd(N);cur=c;const el=$('w');el.textContent=COLORS[w][0];el.style.color=COLORS[c][1];el.dataset.ink=c;el.style.animation='none';void el.offsetWidth;el.style.animation='pop .2s'};
   $('opts').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;const r=b.getBoundingClientRect();
     if(+b.dataset.i===cur){ok++;combo++;maxC=Math.max(maxC,combo);sfx.good();vib(15);floatAt(r.left+r.width/2,r.top,'+1','#4ade80');flash(true)}
     else{bad++;combo=0;sfx.bad();vib(60);floatAt(r.left+r.width/2,r.top,'✗','#f87171');flash(false)}
@@ -475,10 +473,10 @@ async function gonogo(){
     $('cb').textContent=combo>=3?`🔥 x${combo}`:'';$('dot').style.background='transparent'};
   const end=Date.now()+T(45)*1000;runTimer(T(45));
   while(Date.now()<end&&!abort){
-    cur=Math.random()<.72?'g':'r';tapped=false;const d=$('dot');d.dataset.c=cur;
+    cur=Math.random()<(.72-Math.min(.15,gl('gonogo')*.015))?'g':'r';tapped=false;const d=$('dot');d.dataset.c=cur;
     d.style.background=cur==='g'?'radial-gradient(circle at 35% 35%,#86efac,#16a34a)':'radial-gradient(circle at 35% 35%,#fca5a5,#dc2626)';
     d.classList.remove('show');void d.offsetWidth;d.classList.add('show');shownAt=Date.now();
-    await sleep(TEST?400:650);
+    await sleep(TEST?400:Math.max(420,680-gl('gonogo')*28));
     if(!tapped){if(cur==='g'){miss++;combo=0;$('fb').textContent='Terlewat 🐢'}else{cr++;$('fb').textContent='Bagus, kamu tahan ✋'}}
     cur=null;d.style.background='transparent';d.dataset.c='';
     await sleep((TEST?100:350)+rnd(TEST?100:500));
@@ -771,7 +769,7 @@ async function talkSession(only){
   const lastN=review?[]:t.sess.slice(-3);
   if(lastN.length>=3&&lastN.reduce((a,b)=>a+b,0)/3>=2&&lvl<MAXL){t.lvl=lvl+1;t.sess=[];up=true;msg=`Naik ke Level ${t.lvl}: ${TL(t.lvl).name} (Tahap ${SUBN[subOf(t.lvl)]})! 🎉`}
   else if(lastN.length>=3&&lastN.reduce((a,b)=>a+b,0)/3<1.5)msg='Level ini masih berat, tidak apa-apa. Ulangi dulu, itu bagian dari proses 🙂';
-  const xp=15+r*5;const lvUp=addXP(xp);save();const nb=newBadges();
+  afterTalk(r,lvl);const xp=15+r*5;const lvUp=addXP(xp);save();const nb=newBadges();
   const micTxt=mic?`<div class="tip">🎙️ Kamu bersuara <b>${mic.sp} detik</b> dan berhenti napas <b>${mic.pz}×</b>. ${mic.sp<5?'Coba bicara lebih keras supaya terbaca.':mic.pz>=3?'Jeda napasmu bagus 👏':'Coba tambah jeda napas di antara kalimat.'}</div>`:'';
   const nbTxt=nb.length?`<div class="tip">🏅 Lencana baru: ${nb.map(b=>b[0]+' '+b[1]).join(', ')}</div>`:'';
   stage().innerHTML=`<div class="center"><div class="bigic">${up?'🏆':'🎉'}</div><h2>Sesi bicara selesai!</h2><p>${msg}</p><p><span class="pill">+${xp} XP</span> <span class="pill">🔥 ${talkStreak()} hari</span></p>${micTxt}${nbTxt}<p class="mut">Minum air 💧 Suaramu sudah bekerja keras.</p><button class="pri" id="fin">Selesai</button></div>`;
@@ -779,9 +777,8 @@ async function talkSession(only){
   $('fin').onclick=closePlay;
 }
 
-renderHome();
-if(!db.onb)onboarding();
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+window.boot=function(){renderHome();if(!db.onb)onboarding();if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js')};
 </script>
+<script src="elevate.js"></script>
 </body>
 </html>
