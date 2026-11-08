@@ -114,6 +114,11 @@
   .rate{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.rate button{font-size:15px;padding:18px 6px}
   .tip{background:var(--card2);border-radius:14px;padding:12px;margin-top:10px;font-size:15px;line-height:1.6}
   a{color:var(--acc)}
+  .mrow{display:flex;align-items:center;gap:8px;margin:4px 0}.mbar{flex:1;height:10px;background:#37335f;border-radius:99px;overflow:hidden}
+  .mbar>div{height:100%;width:0;background:linear-gradient(90deg,var(--ok),var(--gold));transition:width .08s}
+  .bd{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;text-align:center}
+  .bd div{background:var(--card2);border-radius:14px;padding:10px 2px;font-size:11px;color:var(--mut)}.bd div b{display:block;font-size:26px}
+  .bd .lock{opacity:.35;filter:grayscale(1)}
 </style>
 </head>
 <body>
@@ -339,7 +344,7 @@ function onboarding(){
 // ---------- Mesin latihan ----------
 let abort=false,timerRAF=null,queue=[],qi=0;
 $('pQuit').onclick=async()=>{if(await confirmBox('Keluar dari latihan? Latihan yang sedang jalan tidak disimpan.','Keluar','Lanjut latihan')){abort=true;closePlay()}};
-function closePlay(){$('play').classList.add('hide');cancelAnimationFrame(timerRAF);try{speechSynthesis.cancel()}catch(e){}renderHome();renderTalk()}
+function closePlay(){$('play').classList.add('hide');cancelAnimationFrame(timerRAF);try{speechSynthesis.cancel()}catch(e){}try{micStop()}catch(e){}renderHome();renderTalk()}
 const stage=()=>$('stage');
 const hideTimer=()=>$('pTimerWrap').classList.add('hide');
 function runTimer(sec){
@@ -541,6 +546,27 @@ function speak(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUttera
 const hasTTS=()=>'speechSynthesis' in window;
 const MS=(n)=>TEST?60:n;
 
+// ---- Mikrofon: umpan balik suara (TIDAK direkam, hanya baca volume) ----
+let MIC=null;
+async function micStart(){
+  MIC=null;if(!db.mic)return;
+  try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();const an=ctx.createAnalyser();an.fftSize=1024;ctx.createMediaStreamSource(stream).connect(an);
+    MIC={stream,ctx,an,buf:new Uint8Array(an.fftSize),speech:0,pauses:0,inSp:false,sil:0,had:false,lv:0,last:performance.now(),th:.035,
+      iv:setInterval(micTick,80)};
+  }catch(e){db.mic=false;save();toast('Mikrofon tidak diizinkan. Latihan lanjut tanpa mikrofon 🙂',3500)}
+}
+function micTick(){
+  const m=MIC;if(!m)return;const now=performance.now(),dt=now-m.last;m.last=now;
+  m.an.getByteTimeDomainData(m.buf);let s=0;for(const v of m.buf){const x=(v-128)/128;s+=x*x}
+  const lv=Math.sqrt(s/m.buf.length);m.lv=lv;
+  if(lv>m.th){m.speech+=dt;if(!m.inSp&&m.had&&m.sil>600)m.pauses++;m.inSp=true;m.had=true;m.sil=0}
+  else{m.sil+=dt;if(m.sil>250)m.inSp=false}
+  const b=$('mb');if(b)b.style.width=Math.min(100,lv*600)+'%';
+}
+function micStop(){const m=MIC;if(!m)return null;clearInterval(m.iv);try{m.stream.getTracks().forEach(t=>t.stop());m.ctx.close()}catch(e){}MIC=null;return {sp:Math.round(m.speech/1000),pz:m.pauses}}
+const meterHTML=()=>db.mic?'<div class="mrow"><span>🎙️</span><div class="mbar"><div id="mb"></div></div></div>':'';
+
 // karaoke: kata menyala satu-satu supaya kecepatan bicara terpandu
 let KID=0;
 async function karaoke(text,msWord,msPause,onset){const id=++KID;
@@ -562,7 +588,7 @@ async function drillItems(items,{label,msWord,msPause,onset,hint}){
     let again=true;
     while(again&&!abort){
       again=false;
-      stage().innerHTML=`<p class="mut center">${label} ${i+1}/${items.length}</p>${onset?'<div class="onset"><div id="onb2"></div></div>':''}<div class="kline" id="kl"></div><p class="mut center">${hint}</p>
+      stage().innerHTML=`<p class="mut center">${label} ${i+1}/${items.length}</p>${meterHTML()}${onset?'<div class="onset"><div id="onb2"></div></div>':''}<div class="kline" id="kl"></div><p class="mut center">${hint}</p>
         <div class="g2" style="margin-top:10px"><button class="ghost" id="rep">↻ Ulangi</button><button class="pri" id="nx" disabled style="opacity:.5">Lanjut →</button></div>
         ${hasTTS()?'<button class="ghost small" id="hear" style="margin:10px auto 0;display:block">🔊 Dengar contoh</button>':''}`;
       $('kl').textContent=items[i].replace(/ \/ /g,' • ');
@@ -612,7 +638,7 @@ const TALK=[
   how:['Topik muncul. Kamu bercerita <b>sendiri 1 menit</b>.','Pelan, jeda napas di antara kalimat.','Tap Selesai kalau sudah.'],
   run:()=>new Promise(async res=>{
     const topic=TOPICS[rnd(TOPICS.length)];const cues=['Mulai kalimat pertama dengan lembut','Jeda sebentar, tarik napas','Pelan saja, tidak ada yang menunggu','Satu kalimat pendek sudah cukup','Tersendat? Berhenti, napas, lanjut'];
-    stage().innerHTML=`<div class="center"><h2 style="font-size:22px">${topic}</h2><div class="calm" id="calm" style="animation-duration:8s">🎙️</div><div class="big" id="ts">0</div><p class="mut" id="cue">${cues[0]}</p><button class="pri" id="fin2">Selesai ✓</button></div>`;
+    stage().innerHTML=`<div class="center"><h2 style="font-size:22px">${topic}</h2>${meterHTML()}<div class="calm" id="calm" style="animation-duration:8s">🎙️</div><div class="big" id="ts">0</div><p class="mut" id="cue">${cues[0]}</p><button class="pri" id="fin2">Selesai ✓</button></div>`;
     let stop=false;$('fin2').onclick=()=>{stop=true};const t0=Date.now();let ci=0;
     runTimer(T(60));
     while(!stop&&!abort&&Date.now()-t0<T(60)*1000){$('ts').textContent=Math.floor((Date.now()-t0)/1000)+' dtk';const c=Math.floor((Date.now()-t0)/(TEST?300:9000))%cues.length;if(c!==ci){ci=c;$('cue').textContent=cues[c]}await sleep(250)}
@@ -630,6 +656,22 @@ const TALK=[
 const RATES=[['😣','Susah'],['🙂','Lumayan'],['😊','Enak']];
 const tk=()=>db.talk;
 function talkStreak(){const days=new Set(tk().hist.map(h=>h.k));let s=0;const d=new Date();if(!days.has(dayKey(d)))d.setDate(d.getDate()-1);while(days.has(dayKey(d))){s++;d.setDate(d.getDate()-1)}return s}
+const BADGES=[
+ ['🌱','Sesi pertama',t=>t.hist.length>=1],['💪','10 sesi',t=>t.hist.length>=10],['🔟','25 sesi',t=>t.hist.length>=25],
+ ['🔥','3 hari beruntun',t=>talkStreak()>=3],['🏅','7 hari beruntun',t=>talkStreak()>=7],
+ ['😊','5× terasa enak',t=>t.hist.filter(h=>h.r===3).length>=5],['⏱️','60 menit latihan',t=>t.hist.reduce((a,h)=>a+h.s,0)>=3600],
+ ['🪜','Naik level',t=>t.lvl>=2],['🎶','Level 4',t=>t.lvl>=4],['🌍','Misi nyata',t=>(t.missions||0)>=1],
+ ['🎙️','Pakai mikrofon',t=>!!t.micUsed],['🏆','Level 7',t=>t.lvl>=7]
+];
+function newBadges(){const t=tk();t.badges=t.badges||[];const got=BADGES.filter(b=>b[2](t)&&!t.badges.includes(b[1]));got.forEach(b=>t.badges.push(b[1]));save();return got}
+function projection(){
+  const t=tk(),now=Date.now(),recent=t.hist.filter(h=>(now-new Date(h.k).getTime())<14*864e5).length;
+  const perWeek=recent/2;if(t.lvl>=7)return 'Kamu sudah di Level 7. Tinggal jaga konsisten dan lakukan misi nyata 🌍';
+  if(recent<2)return 'Latihan 2-3 sesi dulu, nanti muncul prediksi tanggal dari ritmemu sendiri.';
+  const rem=(3-Math.min(3,t.sess.length))+3*(6-t.lvl),weeks=Math.max(1,Math.ceil(rem*1.3/Math.max(.5,perWeek)));
+  const d=new Date(now+weeks*7*864e5);
+  return `Ritmemu ±${perWeek.toFixed(1)} sesi/minggu → Level 7 sekitar <b>${d.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</b> (±${weeks} minggu). Makin sering, makin cepat.`;
+}
 function renderTalkCard(){
   const L=TALK[tk().lvl-1],doneToday=tk().hist.some(h=>h.k===dayKey());
   $('talkCard').innerHTML=`<div class="ic">🗣️</div><div class="tt"><b>Latihan Bicara</b><div class="mut">Level ${L.i} · ${L.name}</div></div><div class="sc">${doneToday?'✅':'<span style="font-size:22px;color:var(--acc)">▶</span>'}</div>`;
@@ -647,7 +689,12 @@ function renderTalk(){
     <div class="mut" style="margin-top:10px">Naik level: ${have}/${need} sesi terasa 🙂 atau 😊</div>
     <div class="bar"><div style="width:${have/need*100}%"></div></div>
     <button class="pri" id="btnTalk">▶ Mulai sesi bicara (±5 menit)</button>
+    <div class="row" style="margin-top:8px"><span>🎙️ Umpan balik mikrofon<br><span class="mut" style="font-size:12px">hanya baca volume, tidak direkam</span></span><button class="switch ${db.mic?'on':''}" id="swMic" aria-label="Mikrofon"></button></div>
+    ${t.lvl>1?`<div class="mut" style="margin:8px 0 6px">Atau latih level lain:</div><div style="display:flex;gap:8px;flex-wrap:wrap">${TALK.filter(x=>x.i<t.lvl).map(x=>`<button class="small ghost" data-lv="${x.i}">${x.ic} ${x.i}</button>`).join('')}</div>`:''}
   </div>
+  <div class="card"><h2>🔮 Prediksi</h2><div class="mut" style="line-height:1.6">${projection()}</div></div>
+  <div class="card"><h2>🏅 Lencana <span class="mut" style="font-size:14px">${BADGES.filter(b=>b[2](t)).length}/${BADGES.length}</span></h2>
+    <div class="bd">${BADGES.map(b=>`<div class="${b[2](t)?'':'lock'}"><b>${b[0]}</b>${b[1]}</div>`).join('')}</div></div>
   <div class="card">
     <h2>📊 Progresmu</h2>
     <div class="row"><span>🔥 Hari beruntun</span><b>${talkStreak()}</b></div>
@@ -675,24 +722,30 @@ function renderTalk(){
     <div class="tip">🩺 App ini latihan mandiri, <b>bukan pengganti terapis wicara</b>. Hasil terbaik: kombinasikan dengan terapis (SLP).</div>
   </div>`;
   $('btnTalk').onclick=()=>talkSession();
+  $('swMic').onclick=()=>{db.mic=!db.mic;save();renderTalk()};
+  document.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>talkSession(+b.dataset.lv));
 }
-async function talkSession(){
+async function talkSession(only){
   abort=false;queue=['a','b','c'];qi=0;$('play').classList.remove('hide');$('pTitle').textContent='Latihan Bicara';
-  const t0=Date.now(),lvl=tk().lvl,L=TALK[lvl-1];
+  const t0=Date.now(),lvl=only||tk().lvl,L=TALK[lvl-1],review=!!only&&only!==tk().lvl;
   drawDots();await breathe();if(abort)return;
   qi=1;drawDots();await talkIntro(L);if(abort)return;
-  await L.run();if(abort)return;
+  await micStart();if(MIC)tk().micUsed=true;
+  await L.run();if(abort){micStop();return}
+  const mic=micStop();
   qi=2;drawDots();hideTimer();
   const r=await new Promise(res=>{stage().innerHTML=`<div class="center"><div class="bigic">🌟</div><h2>Seberapa enak bicaramu tadi?</h2><p class="mut">Jujur saja. Tersendat itu bukan nilai jelek.</p><div class="rate">${RATES.map((x,i)=>`<button data-r="${i+1}"><div style="font-size:34px">${x[0]}</div>${x[1]}</button>`).join('')}</div></div>`;
     stage().onclick=ev=>{const b=ev.target.closest('button');if(!b)return;stage().onclick=null;res(+b.dataset.r)}});
   if(abort)return;
   const t=tk();t.hist.push({k:dayKey(),l:lvl,r,s:Math.round((Date.now()-t0)/1000)});t.hist=t.hist.slice(-300);
-  t.sess.push(r);let msg='Sesi tercatat. Konsisten itu yang bikin maju 💪',up=false;
-  const lastN=t.sess.slice(-3);
+  if(!review)t.sess.push(r);let msg='Sesi tercatat. Konsisten itu yang bikin maju 💪',up=false;
+  const lastN=review?[]:t.sess.slice(-3);
   if(lastN.length>=3&&lastN.reduce((a,b)=>a+b,0)/3>=2&&lvl<7){t.lvl=lvl+1;t.sess=[];up=true;msg=`Naik ke Level ${t.lvl}: ${TALK[t.lvl-1].name}! 🎉`}
   else if(lastN.length>=3&&lastN.reduce((a,b)=>a+b,0)/3<1.5)msg='Level ini masih berat, tidak apa-apa. Ulangi dulu, itu bagian dari proses 🙂';
-  const xp=15+r*5;const lvUp=addXP(xp);save();
-  stage().innerHTML=`<div class="center"><div class="bigic">${up?'🏆':'🎉'}</div><h2>Sesi bicara selesai!</h2><p>${msg}</p><p><span class="pill">+${xp} XP</span> <span class="pill">🔥 ${talkStreak()} hari</span></p><p class="mut">Minum air 💧 Suaramu sudah bekerja keras.</p><button class="pri" id="fin">Selesai</button></div>`;
+  const xp=15+r*5;const lvUp=addXP(xp);save();const nb=newBadges();
+  const micTxt=mic?`<div class="tip">🎙️ Kamu bersuara <b>${mic.sp} detik</b> dan berhenti napas <b>${mic.pz}×</b>. ${mic.sp<5?'Coba bicara lebih keras supaya terbaca.':mic.pz>=3?'Jeda napasmu bagus 👏':'Coba tambah jeda napas di antara kalimat.'}</div>`:'';
+  const nbTxt=nb.length?`<div class="tip">🏅 Lencana baru: ${nb.map(b=>b[0]+' '+b[1]).join(', ')}</div>`:'';
+  stage().innerHTML=`<div class="center"><div class="bigic">${up?'🏆':'🎉'}</div><h2>Sesi bicara selesai!</h2><p>${msg}</p><p><span class="pill">+${xp} XP</span> <span class="pill">🔥 ${talkStreak()} hari</span></p>${micTxt}${nbTxt}<p class="mut">Minum air 💧 Suaramu sudah bekerja keras.</p><button class="pri" id="fin">Selesai</button></div>`;
   sfx.win();confetti();vib([80,60,80]);if(lvUp)setTimeout(()=>{sfx.lvl();toast(`⬆️ Level otak ${level()}!`)},600);
   $('fin').onclick=closePlay;
 }
